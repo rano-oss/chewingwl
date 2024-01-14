@@ -1,3 +1,12 @@
+use chewing::{
+    conversion::ChewingEngine,
+    dictionary::{LayeredDictionary, SystemDictionaryLoader, UserDictionaryLoader},
+    editor::{
+        keyboard::{self, AnyKeyboardLayout, KeyboardLayout, Modifiers as Mods, Qwerty},
+        syllable::KeyboardLayoutCompat,
+        BasicEditor, Editor, LaxUserFreqEstimate,
+    },
+};
 use iced::{
     event::{self, listen_raw, wayland::InputMethodEvent},
     wayland::{
@@ -21,7 +30,6 @@ use iced_style::application;
 use selection_field::widget::selection_field;
 use std::{cmp::min, fmt::Debug};
 mod selection_field;
-use chewing_rs::Chewing;
 
 fn main() -> iced::Result {
     let initial_surface = InputMethodPopupSettings::default();
@@ -32,6 +40,35 @@ fn main() -> iced::Result {
     InputMethod::run(settings)
 }
 
+struct Chewing {
+    dict: LayeredDictionary,
+    engine: ChewingEngine,
+    kb_compat: KeyboardLayoutCompat,
+    editor: Editor<ChewingEngine>,
+    keyboard: AnyKeyboardLayout,
+}
+
+impl Chewing {
+    fn new() -> Self {
+        let dictionaries = SystemDictionaryLoader::new().load();
+        let user_dictionary = UserDictionaryLoader::new().load();
+        let estimate = LaxUserFreqEstimate::open(user_dictionary.unwrap().as_ref());
+        let dict =
+            LayeredDictionary::new(dictionaries.unwrap_or_default(), user_dictionary.unwrap());
+        let engine = ChewingEngine::new();
+        let kb_compat = KeyboardLayoutCompat::Default;
+        let keyboard = AnyKeyboardLayout::Qwerty(Qwerty);
+        let editor = Editor::new(engine, dict, estimate.unwrap());
+        Chewing {
+            dict,
+            engine,
+            kb_compat,
+            editor,
+            keyboard,
+        }
+    }
+}
+
 struct InputMethod {
     page: usize,
     index: usize,
@@ -39,7 +76,7 @@ struct InputMethod {
     state: State,
     candidates: Vec<String>,
     current_preedit: String,
-    cursor_position: i32,
+    cursor_position: usize,
     preedit_len: usize,
     pages: Vec<Vec<String>>,
     max_candidates: usize,
@@ -49,19 +86,19 @@ struct InputMethod {
 
 impl InputMethod {
     fn preedit_string(&mut self) -> Command<Message> {
-        let preedit = self.chewing.preedit();
+        let preedit = self.chewing.editor.display();
         self.preedit_len = preedit.len();
         if self.current_preedit != preedit
-            || self.chewing.cursor_position() * 3 != self.cursor_position
+            || self.chewing.editor.cursor() * 3 != self.cursor_position
         {
             self.current_preedit = preedit.clone();
             self.state = State::WaitingForDone;
-            self.cursor_position = self.chewing.cursor_position() * 3;
+            self.cursor_position = self.chewing.editor.cursor() * 3;
             Command::batch(vec![
                 input_method_action(ActionInner::SetPreeditString {
                     string: preedit,
-                    cursor_begin: self.chewing.cursor_position() * 3,
-                    cursor_end: self.chewing.cursor_position() * 3,
+                    cursor_begin: (self.chewing.editor.cursor() * 3) as i32,
+                    cursor_end: (self.chewing.editor.cursor() * 3) as i32,
                 }),
                 input_method_action(ActionInner::Commit),
             ])
@@ -91,7 +128,7 @@ impl InputMethod {
             .collect();
         self.state = State::WaitingForDone;
         self.popup = true;
-        self.cursor_position = self.chewing.cursor_position() * 3;
+        self.cursor_position = self.chewing.editor.cursor() * 3;
         self.index = 0;
         self.page = 0;
         self.pages =
@@ -99,8 +136,8 @@ impl InputMethod {
         Command::batch(vec![
             input_method_action(ActionInner::SetPreeditString {
                 string: preedit,
-                cursor_begin: self.chewing.cursor_position() * 3,
-                cursor_end: self.chewing.cursor_position() * 3,
+                cursor_begin: (self.chewing.editor.cursor() * 3) as i32,
+                cursor_end: (self.chewing.editor.cursor() * 3) as i32,
             }),
             input_method_action(ActionInner::Commit),
         ])
@@ -137,7 +174,7 @@ impl Application for InputMethod {
             InputMethod {
                 page: 0,
                 index: 0,
-                chewing: Chewing::new().expect("libchewing not found"),
+                chewing: Chewing::new(),
                 state: State::PassThrough,
                 candidates: Vec::new(),
                 current_preedit: String::new(),
@@ -158,66 +195,87 @@ impl Application for InputMethod {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Activate => {
-                self.chewing.shift_space();
-                Command::none()
-            }
+            Message::Activate => Command::none(),
             Message::Deactivate => {
-                self.chewing.esc();
+                self.chewing
+                    .editor
+                    .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                 self.state = State::PassThrough;
                 hide_input_method_popup()
             }
             Message::KeyPressed(key, key_code, modifiers) => match self.state {
                 State::PreEdit => match key_code {
-                    KeyCode::LShift => {
-                        self.chewing.shift_left();
-                        self.preedit_string()
-                    }
-                    KeyCode::RShift => {
-                        self.chewing.shift_right();
-                        self.preedit_string()
-                    }
+                    // KeyCode::LShift => {
+                    //     self.chewing.shift_left();
+                    //     self.preedit_string()
+                    // }
+                    // KeyCode::RShift => {
+                    //     self.chewing.shift_right();
+                    //     self.preedit_string()
+                    // }
                     KeyCode::Backspace => {
-                        self.chewing.backspace();
+                        self.chewing.editor.process_keyevent(
+                            self.chewing.keyboard.map(keyboard::KeyCode::Backspace),
+                        );
                         self.preedit_string()
                     }
                     KeyCode::Space => {
                         if modifiers.shift {
-                            self.chewing.shift_space();
+                            self.chewing.editor.process_keyevent(
+                                self.chewing
+                                    .keyboard
+                                    .map_with_mod(keyboard::KeyCode::Space, Mods::shift()),
+                            );
                         } else {
-                            self.chewing.space();
+                            self.chewing.editor.process_keyevent(
+                                self.chewing.keyboard.map(keyboard::KeyCode::Space),
+                            );
                         }
                         self.preedit_string()
                     }
                     KeyCode::Enter => self.commit_string(),
                     KeyCode::Escape => {
-                        self.chewing.esc();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                         self.preedit_string()
                     }
                     KeyCode::Delete => {
-                        self.chewing.del();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Del));
                         self.preedit_string()
                     }
                     KeyCode::Left => {
-                        self.chewing.left();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Left));
                         self.preedit_string()
                     }
                     KeyCode::Right => {
-                        self.chewing.right();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Right));
                         self.preedit_string()
                     }
                     KeyCode::Down => self.open_popup(),
                     KeyCode::Up => {
-                        self.chewing.up();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Up));
                         self.preedit_string()
                     }
                     KeyCode::Tab => {
-                        self.chewing.tab();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Tab));
                         self.preedit_string()
                     }
                     _ => {
                         if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
-                            self.chewing.default(char);
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
                             self.preedit_string()
                         } else {
                             Command::none()
@@ -282,12 +340,12 @@ impl Application for InputMethod {
                     KeyCode::Escape => {
                         self.chewing.esc();
                         self.state = State::PreEdit;
-                        self.cursor_position = self.chewing.cursor_position() * 3;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
                         Command::batch(vec![
                             input_method_action(ActionInner::SetPreeditString {
                                 string: self.chewing.preedit(),
-                                cursor_begin: self.chewing.cursor_position() * 3,
-                                cursor_end: self.chewing.cursor_position() * 3,
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
                             }),
                             input_method_action(ActionInner::Commit),
                             hide_input_method_popup(),
@@ -301,7 +359,9 @@ impl Application for InputMethod {
                 }
                 State::PassThrough => {
                     if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
-                        self.chewing.default(char);
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
                         if self.chewing.preedit().is_empty() {
                             virtual_keyboard_action(VKActionInner::KeyPressed(key))
                         } else {
