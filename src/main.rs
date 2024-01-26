@@ -326,19 +326,21 @@ impl Application for InputMethod {
                         self.current_preedit = self.chewing.preedit();
                         self.state = State::WaitingForDone;
                         self.popup = false;
-                        self.cursor_position = self.chewing.cursor_position() * 3;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
                         Command::batch(vec![
                             input_method_action(ActionInner::SetPreeditString {
                                 string: self.chewing.preedit(),
-                                cursor_begin: self.chewing.cursor_position() * 3,
-                                cursor_end: self.chewing.cursor_position() * 3,
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
                             }),
                             input_method_action(ActionInner::Commit),
                             hide_input_method_popup(),
                         ])
                     }
                     KeyCode::Escape => {
-                        self.chewing.esc();
+                        self.chewing
+                            .editor
+                            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                         self.state = State::PreEdit;
                         self.cursor_position = self.chewing.editor.cursor() * 3;
                         Command::batch(vec![
