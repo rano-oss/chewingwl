@@ -3,8 +3,10 @@ use chewing::{
     dictionary::{LayeredDictionary, SystemDictionaryLoader, UserDictionaryLoader},
     editor::{
         keyboard::{self, AnyKeyboardLayout, KeyboardLayout, Modifiers as Mods, Qwerty},
-        syllable::KeyboardLayoutCompat,
-        BasicEditor, Editor, LaxUserFreqEstimate,
+        // syllable::KeyboardLayoutCompat,
+        BasicEditor,
+        Editor,
+        LaxUserFreqEstimate,
     },
 };
 use iced::{
@@ -41,31 +43,37 @@ fn main() -> iced::Result {
 }
 
 struct Chewing {
-    dict: LayeredDictionary,
-    engine: ChewingEngine,
-    kb_compat: KeyboardLayoutCompat,
+    // kb_compat: KeyboardLayoutCompat,
     editor: Editor<ChewingEngine>,
     keyboard: AnyKeyboardLayout,
 }
 
 impl Chewing {
     fn new() -> Self {
-        let dictionaries = SystemDictionaryLoader::new().load();
-        let user_dictionary = UserDictionaryLoader::new().load();
-        let estimate = LaxUserFreqEstimate::open(user_dictionary.unwrap().as_ref());
-        let dict =
-            LayeredDictionary::new(dictionaries.unwrap_or_default(), user_dictionary.unwrap());
+        let dictionaries = SystemDictionaryLoader::new().load().unwrap_or_default();
+        let user_dictionary = UserDictionaryLoader::new().load().unwrap();
+        let estimate = LaxUserFreqEstimate::open(user_dictionary.as_ref());
+        let dict = LayeredDictionary::new(dictionaries, user_dictionary);
         let engine = ChewingEngine::new();
-        let kb_compat = KeyboardLayoutCompat::Default;
+        // let kb_compat = KeyboardLayoutCompat::Default;
         let keyboard = AnyKeyboardLayout::Qwerty(Qwerty);
         let editor = Editor::new(engine, dict, estimate.unwrap());
         Chewing {
-            dict,
-            engine,
-            kb_compat,
+            // kb_compat,
             editor,
             keyboard,
         }
+    }
+
+    fn preedit(&self) -> String {
+        let buffer = self.editor.display();
+
+        format!(
+            "{}{}{}",
+            buffer[0..self.editor.cursor()].to_string(),
+            self.editor.syllable_buffer(),
+            buffer[self.editor.cursor()..].to_string()
+        )
     }
 }
 
@@ -86,31 +94,32 @@ struct InputMethod {
 
 impl InputMethod {
     fn preedit_string(&mut self) -> Command<Message> {
-        let preedit = self.chewing.editor.display();
+        let preedit = self.chewing.preedit();
+        println!("{:?}", preedit);
         self.preedit_len = preedit.len();
-        if self.current_preedit != preedit
-            || self.chewing.editor.cursor() * 3 != self.cursor_position
-        {
-            self.current_preedit = preedit.clone();
-            self.state = State::WaitingForDone;
-            self.cursor_position = self.chewing.editor.cursor() * 3;
-            Command::batch(vec![
-                input_method_action(ActionInner::SetPreeditString {
-                    string: preedit,
-                    cursor_begin: (self.chewing.editor.cursor() * 3) as i32,
-                    cursor_end: (self.chewing.editor.cursor() * 3) as i32,
-                }),
-                input_method_action(ActionInner::Commit),
-            ])
-        } else {
-            Command::none()
-        }
+        // if self.current_preedit != preedit || self.chewing.editor.cursor() != self.cursor_position {
+        self.current_preedit = preedit.clone();
+        // self.state = State::WaitingForDone;
+        self.cursor_position = self.chewing.editor.cursor(); // * 3;
+        Command::batch(vec![
+            input_method_action(ActionInner::SetPreeditString {
+                string: preedit,
+                cursor_begin: (self.chewing.editor.cursor()) as i32,
+                cursor_end: (self.chewing.editor.cursor()) as i32,
+            }),
+            input_method_action(ActionInner::Commit),
+        ])
+        // } else {
+        //     Command::none()
+        // }
     }
 
     fn commit_string(&mut self) -> Command<Message> {
-        let commit_string = format!("{}{}", self.chewing.buffer(), self.chewing.bopomofo());
+        let commit_string = self.chewing.preedit();
         self.state = State::PassThrough;
-        self.chewing.enter();
+        self.chewing
+            .editor
+            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Enter));
         Command::batch(vec![
             input_method_action(ActionInner::CommitString(commit_string)),
             input_method_action(ActionInner::Commit),
@@ -119,13 +128,10 @@ impl InputMethod {
 
     fn open_popup(&mut self) -> Command<Message> {
         let preedit = self.chewing.preedit();
-        self.chewing.down();
-        self.candidates = self
-            .chewing
-            .list()
-            .iter()
-            .map(|&s| String::from(s))
-            .collect();
+        self.chewing
+            .editor
+            .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Down));
+        self.candidates = self.chewing.editor.all_candidates().unwrap_or_default();
         self.state = State::WaitingForDone;
         self.popup = true;
         self.cursor_position = self.chewing.editor.cursor() * 3;
@@ -321,8 +327,10 @@ impl Application for InputMethod {
                         Command::none()
                     }
                     KeyCode::Enter => {
-                        self.chewing
-                            .choose_by_index((self.page * self.max_candidates + self.index) as u8);
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + self.index);
                         self.current_preedit = self.chewing.preedit();
                         self.state = State::WaitingForDone;
                         self.popup = false;
@@ -367,7 +375,6 @@ impl Application for InputMethod {
                         if self.chewing.preedit().is_empty() {
                             virtual_keyboard_action(VKActionInner::KeyPressed(key))
                         } else {
-                            self.state = State::PreEdit;
                             self.preedit_string()
                         }
                     } else {
