@@ -3,20 +3,11 @@ name = "sctk_input_method"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-# iced = { path = "/home/eivind/Public/code/iced_pop", default-features = false, features = ["wayland", "debug", "wayland_input_method", "wayland_virtual_keyboard"] }
-# iced_style = { path = "/home/eivind/Public/code/iced_pop/style" }
-# iced_core = { path = "/home/eivind/Public/code/iced_pop/core" }
-# iced_renderer = { path = "/home/eivind/Public/code/iced_pop/renderer" }
-# iced_runtime = { path = "/home/eivind/Public/code/iced_pop/runtime" }
-
 iced = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard", default-features = false, features = ["wayland", "debug", "wayland_input_method", "wayland_virtual_keyboard"] }
 iced_style = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 iced_core = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 iced_renderer = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 iced_runtime = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 env_logger = "0.10"
-# chewing-rs = { path = "/home/eivind/Public/code/chewing-rs" }
 chewing = { git = "https://github.com/chewing/libchewing.git" }

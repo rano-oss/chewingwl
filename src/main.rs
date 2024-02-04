@@ -66,14 +66,9 @@ impl Chewing {
     }
 
     fn preedit(&self) -> String {
-        let buffer = self.editor.display();
-
-        format!(
-            "{}{}{}",
-            buffer[0..self.editor.cursor()].to_string(),
-            self.editor.syllable_buffer(),
-            buffer[self.editor.cursor()..].to_string()
-        )
+        let mut b1 = self.editor.display();
+        let b2 = b1.split_off(self.editor.cursor() * 3);
+        format!("{}{}{}", b1, self.editor.syllable_buffer(), b2)
     }
 }
 
@@ -95,23 +90,18 @@ struct InputMethod {
 impl InputMethod {
     fn preedit_string(&mut self) -> Command<Message> {
         let preedit = self.chewing.preedit();
-        println!("{:?}", preedit);
         self.preedit_len = preedit.len();
-        // if self.current_preedit != preedit || self.chewing.editor.cursor() != self.cursor_position {
         self.current_preedit = preedit.clone();
-        // self.state = State::WaitingForDone;
-        self.cursor_position = self.chewing.editor.cursor(); // * 3;
+        self.state = State::WaitingForDone;
+        self.cursor_position = self.chewing.editor.cursor() * 3;
         Command::batch(vec![
             input_method_action(ActionInner::SetPreeditString {
                 string: preedit,
-                cursor_begin: (self.chewing.editor.cursor()) as i32,
-                cursor_end: (self.chewing.editor.cursor()) as i32,
+                cursor_begin: self.cursor_position as i32,
+                cursor_end: self.cursor_position as i32,
             }),
             input_method_action(ActionInner::Commit),
         ])
-        // } else {
-        //     Command::none()
-        // }
     }
 
     fn commit_string(&mut self) -> Command<Message> {
@@ -142,8 +132,8 @@ impl InputMethod {
         Command::batch(vec![
             input_method_action(ActionInner::SetPreeditString {
                 string: preedit,
-                cursor_begin: (self.chewing.editor.cursor() * 3) as i32,
-                cursor_end: (self.chewing.editor.cursor() * 3) as i32,
+                cursor_begin: self.cursor_position as i32,
+                cursor_end: self.cursor_position as i32,
             }),
             input_method_action(ActionInner::Commit),
         ])
@@ -211,14 +201,46 @@ impl Application for InputMethod {
             }
             Message::KeyPressed(key, key_code, modifiers) => match self.state {
                 State::PreEdit => match key_code {
-                    // KeyCode::LShift => {
-                    //     self.chewing.shift_left();
-                    //     self.preedit_string()
-                    // }
-                    // KeyCode::RShift => {
-                    //     self.chewing.shift_right();
-                    //     self.preedit_string()
-                    // }
+                    KeyCode::Period => {
+                        if modifiers.ctrl {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii('>' as u8));
+                            self.preedit_string()
+                        } else {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii('.' as u8));
+                            self.preedit_string()
+                        }
+                    }
+                    KeyCode::Comma => {
+                        if modifiers.ctrl {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii('<' as u8));
+                            self.preedit_string()
+                        } else {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii(',' as u8));
+                            self.preedit_string()
+                        }
+                    }
+                    KeyCode::Slash => {
+                        println!("{:?}", key_code);
+                        if modifiers.shift {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii('/' as u8));
+                            self.preedit_string()
+                        } else {
+                            self.chewing
+                                .editor
+                                .process_keyevent(self.chewing.keyboard.map_ascii('/' as u8));
+                            self.preedit_string()
+                        }
+                    }
                     KeyCode::Backspace => {
                         self.chewing.editor.process_keyevent(
                             self.chewing.keyboard.map(keyboard::KeyCode::Backspace),
@@ -278,6 +300,7 @@ impl Application for InputMethod {
                         self.preedit_string()
                     }
                     _ => {
+                        println!("{:?}", key);
                         if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
                             self.chewing
                                 .editor
@@ -365,6 +388,7 @@ impl Application for InputMethod {
                 },
                 State::WaitingForDone => {
                     // Do nothing if text input client is not ready
+                    // TODO: add timer for misbehaving clients
                     Command::none()
                 }
                 State::PassThrough => {
@@ -382,7 +406,7 @@ impl Application for InputMethod {
                     }
                 }
             },
-            Message::KeyReleased(key, _key_code, modifiers) => match self.state {
+            Message::KeyReleased(key, _key_code, _modifiers) => match self.state {
                 State::PassThrough => virtual_keyboard_action(VKActionInner::KeyReleased(key)),
                 State::PreEdit | State::Popup | State::WaitingForDone => Command::none(),
             },
