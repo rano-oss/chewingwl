@@ -148,6 +148,7 @@ pub enum Message {
     KeyReleased(KeyEvent, KeyCode, Modifiers),
     Modifiers(Modifiers, RawModifiers),
     UpdatePopup { page: usize, index: usize },
+    ClosePopup,
     Done,
 }
 
@@ -191,7 +192,10 @@ impl Application for InputMethod {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Activate => Command::none(),
+            Message::Activate => {
+                self.state = State::PassThrough;
+                Command::none()
+            }
             Message::Deactivate => {
                 self.chewing
                     .editor
@@ -201,46 +205,6 @@ impl Application for InputMethod {
             }
             Message::KeyPressed(key, key_code, modifiers) => match self.state {
                 State::PreEdit => match key_code {
-                    KeyCode::Period => {
-                        if modifiers.ctrl {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii('>' as u8));
-                            self.preedit_string()
-                        } else {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii('.' as u8));
-                            self.preedit_string()
-                        }
-                    }
-                    KeyCode::Comma => {
-                        if modifiers.ctrl {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii('<' as u8));
-                            self.preedit_string()
-                        } else {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii(',' as u8));
-                            self.preedit_string()
-                        }
-                    }
-                    KeyCode::Slash => {
-                        println!("{:?}", key_code);
-                        if modifiers.shift {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii('/' as u8));
-                            self.preedit_string()
-                        } else {
-                            self.chewing
-                                .editor
-                                .process_keyevent(self.chewing.keyboard.map_ascii('/' as u8));
-                            self.preedit_string()
-                        }
-                    }
                     KeyCode::Backspace => {
                         self.chewing.editor.process_keyevent(
                             self.chewing.keyboard.map(keyboard::KeyCode::Backspace),
@@ -300,7 +264,6 @@ impl Application for InputMethod {
                         self.preedit_string()
                     }
                     _ => {
-                        println!("{:?}", key);
                         if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
                             self.chewing
                                 .editor
@@ -373,6 +336,7 @@ impl Application for InputMethod {
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                         self.state = State::PreEdit;
+                        self.popup = false;
                         self.cursor_position = self.chewing.editor.cursor() * 3;
                         Command::batch(vec![
                             input_method_action(ActionInner::SetPreeditString {
@@ -433,6 +397,25 @@ impl Application for InputMethod {
                 self.index = index;
                 Command::none()
             }
+            Message::ClosePopup => {
+                let _ = self
+                    .chewing
+                    .editor
+                    .select(self.page * self.max_candidates + self.index);
+                self.current_preedit = self.chewing.preedit();
+                self.state = State::WaitingForDone;
+                self.popup = false;
+                self.cursor_position = self.chewing.editor.cursor() * 3;
+                Command::batch(vec![
+                    input_method_action(ActionInner::SetPreeditString {
+                        string: self.chewing.preedit(),
+                        cursor_begin: self.cursor_position as i32,
+                        cursor_end: self.cursor_position as i32,
+                    }),
+                    input_method_action(ActionInner::Commit),
+                    hide_input_method_popup(),
+                ])
+            }
         }
     }
 
@@ -465,7 +448,7 @@ impl Application for InputMethod {
                                 )
                                 .set_indexes(page, index)
                                 .selected(self.page, self.index)
-                                .on_press(Message::Deactivate)
+                                .on_press(Message::ClosePopup)
                                 .on_select(Message::UpdatePopup { page, index })
                                 .into()
                             })

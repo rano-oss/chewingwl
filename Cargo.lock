@@ -513,6 +513,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "chewingwl"
+version = "0.1.0"
+dependencies = [
+ "chewing",
+ "env_logger",
+ "iced",
+ "iced_core",
+ "iced_renderer",
+ "iced_runtime",
+ "iced_style",
+]
+
+[[package]]
 name = "clipboard-win"
 version = "4.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2366,19 +2379,6 @@ dependencies = [
  "memmap2 0.5.10",
  "smithay-client-toolkit 0.16.1 (git+https://github.com/pop-os/client-toolkit?branch=wayland-resize)",
  "tiny-skia 0.8.4",
-]
-
-[[package]]
-name = "sctk_input_method"
-version = "0.1.0"
-dependencies = [
- "chewing",
- "env_logger",
- "iced",
- "iced_core",
- "iced_renderer",
- "iced_runtime",
- "iced_style",
 ]
 
 [[package]]
