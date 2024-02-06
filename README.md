@@ -3,6 +3,7 @@
 ## Work left until alpha release
 - [ ] Expanded list navigation
 - [ ] Multiple to single Character select
+- [ ] Number Key select
 
 ## Work left until 1.0
 - [ ] Config gui
