@@ -2,7 +2,7 @@
 
 ## Work left until alpha release
 - [ ] Expanded list navigation
-- [ ] Multiple to single Character select
+- [x] Multiple to single Character select
 - [ ] Number Key select
 - [ ] Shift language change
 

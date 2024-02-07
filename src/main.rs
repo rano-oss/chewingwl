@@ -278,6 +278,18 @@ impl Application for InputMethod {
                     KeyCode::Down => {
                         if self.index < min(self.candidates.len(), self.max_candidates) - 1 {
                             self.index += 1;
+                        } else if self.index == min(self.candidates.len(), self.max_candidates) - 1
+                        {
+                            self.chewing.editor.process_keyevent(
+                                self.chewing.keyboard.map(keyboard::KeyCode::Down),
+                            );
+                            self.candidates =
+                                self.chewing.editor.all_candidates().unwrap_or_default();
+                            self.index = 0;
+                            self.page = 0;
+                            self.pages = vec![self.candidates
+                                [0..min(self.max_candidates, self.candidates.len())]
+                                .to_vec()];
                         }
                         Command::none()
                     }
