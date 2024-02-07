@@ -85,6 +85,7 @@ struct InputMethod {
     max_candidates: usize,
     max_pages: usize,
     popup: bool,
+    passthrough_mode: bool,
 }
 
 impl InputMethod {
@@ -181,6 +182,7 @@ impl Application for InputMethod {
                 max_candidates: 10,
                 max_pages: 3,
                 popup: false,
+                passthrough_mode: false,
             },
             Command::none(),
         )
@@ -558,16 +560,33 @@ impl Application for InputMethod {
                     Command::none()
                 }
                 State::PassThrough => {
-                    if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
+                    if self.passthrough_mode {
+                        if key_code == KeyCode::RShift || key_code == KeyCode::LShift {
+                            self.passthrough_mode = !self.passthrough_mode;
+                            Command::none()
+                        } else {
+                            dbg!("first");
+                            virtual_keyboard_action(VKActionInner::KeyPressed(key))
+                        }
+                    } else if key_code == KeyCode::RShift || key_code == KeyCode::LShift {
+                        self.passthrough_mode = !self.passthrough_mode;
+                        Command::none()
+                    } else if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
                         if self.chewing.preedit().is_empty() {
+                            if !self.passthrough_mode {
+                                dbg!("passthrough reset");
+                                self.passthrough_mode = true;
+                            }
+                            dbg!("here?");
                             virtual_keyboard_action(VKActionInner::KeyPressed(key))
                         } else {
                             self.preedit_string()
                         }
                     } else {
+                        dbg!("last");
                         virtual_keyboard_action(VKActionInner::KeyPressed(key))
                     }
                 }

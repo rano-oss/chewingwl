@@ -4,10 +4,12 @@
 - [ ] Expanded list navigation
 - [x] Multiple to single Character select
 - [x] Number Key select
-- [ ] Shift language change
+- [x] Shift language change
 
 ## Work left for beta release
 - [ ] Replace magic number 3 with actual counting of bytes for cursor
+- [ ] Better shift mechanic?
+- [ ] Wide mode chinese
 
 ## Work left until 1.0
 - [ ] Config gui
