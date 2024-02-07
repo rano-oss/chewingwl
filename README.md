@@ -3,7 +3,7 @@
 ## Work left until alpha release
 - [ ] Expanded list navigation
 - [x] Multiple to single Character select
-- [ ] Number Key select
+- [x] Number Key select
 - [ ] Shift language change
 
 ## Work left for beta release

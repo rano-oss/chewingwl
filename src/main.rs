@@ -275,6 +275,196 @@ impl Application for InputMethod {
                     }
                 },
                 State::Popup => match key_code {
+                    KeyCode::Key1 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 0);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key2 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 1);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key3 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 2);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key4 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 3);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key5 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 4);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key6 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 5);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key7 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 6);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key8 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 7);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key9 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 8);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
+                    KeyCode::Key0 => {
+                        let _ = self
+                            .chewing
+                            .editor
+                            .select(self.page * self.max_candidates + 9);
+                        self.current_preedit = self.chewing.preedit();
+                        self.state = State::WaitingForDone;
+                        self.popup = false;
+                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        Command::batch(vec![
+                            input_method_action(ActionInner::SetPreeditString {
+                                string: self.chewing.preedit(),
+                                cursor_begin: self.cursor_position as i32,
+                                cursor_end: self.cursor_position as i32,
+                            }),
+                            input_method_action(ActionInner::Commit),
+                            hide_input_method_popup(),
+                        ])
+                    }
                     KeyCode::Down => {
                         if self.index < min(self.candidates.len(), self.max_candidates) - 1 {
                             self.index += 1;
