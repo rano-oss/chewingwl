@@ -11,3 +11,8 @@ iced_renderer = { git = "https://github.com/rano-oss/iced", branch = "input_meth
 iced_runtime = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 env_logger = "0.10"
 chewing = { git = "https://github.com/chewing/libchewing.git" }
+
+[profile.release]
+lto = true
+strip = true
+opt-level = "z"
