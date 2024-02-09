@@ -1,6 +1,7 @@
 //! Allow your users to perform actions by selecting a field.
 
 use super::style::StyleSheet;
+use iced::Size;
 use iced_runtime::core::{
     event::{self, Event},
     layout, mouse, overlay, renderer, touch,
@@ -8,19 +9,18 @@ use iced_runtime::core::{
         tree::{self, Tree},
         Id,
     },
-    Background, Clipboard, Color, Element, Layout, Length, Padding, Point, Rectangle, Shell,
-    Widget,
+    Background, Clipboard, Color, Element, Layout, Length, Padding, Rectangle, Shell, Widget,
 };
 
 /// A generic widget that produces a message when pressed.
 #[allow(missing_debug_implementations)]
-pub struct SelectionField<'a, Message, Renderer = iced::Renderer>
+pub struct SelectionField<'a, Message, Theme = crate::Theme, Renderer = iced::Renderer>
 where
+    Theme: StyleSheet,
     Renderer: iced_core::Renderer,
-    Renderer::Theme: StyleSheet,
 {
     id: Id,
-    content: Element<'a, Message, Renderer>,
+    content: Element<'a, Message, Theme, Renderer>,
     on_press: Option<Message>,
     on_select: Option<Message>,
     page: usize,
@@ -29,16 +29,16 @@ where
     width: Length,
     height: Length,
     padding: Padding,
-    style: <Renderer::Theme as StyleSheet>::Style,
+    style: <Theme as StyleSheet>::Style,
 }
 
-impl<'a, Message, Renderer> SelectionField<'a, Message, Renderer>
+impl<'a, Message, Theme, Renderer> SelectionField<'a, Message, Theme, Renderer>
 where
     Renderer: iced_core::Renderer,
-    Renderer::Theme: StyleSheet,
+    Theme: StyleSheet,
 {
     /// Creates a new [`Button`] with the given content.
-    pub fn new(content: impl Into<Element<'a, Message, Renderer>>) -> Self {
+    pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         SelectionField {
             id: Id::unique(),
             content: content.into(),
@@ -50,7 +50,7 @@ where
             width: Length::Shrink,
             height: Length::Shrink,
             padding: Padding::new(2.0),
-            style: <Renderer::Theme as StyleSheet>::Style::default(),
+            style: <Theme as StyleSheet>::Style::default(),
         }
     }
 
@@ -100,7 +100,7 @@ where
     }
 
     /// Sets the style variant of this [`Button`].
-    pub fn style(mut self, style: <Renderer::Theme as StyleSheet>::Style) -> Self {
+    pub fn style(mut self, style: <Theme as StyleSheet>::Style) -> Self {
         self.style = style;
         self
     }
@@ -112,11 +112,12 @@ where
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer> for SelectionField<'a, Message, Renderer>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for SelectionField<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Renderer: 'a + iced_core::Renderer,
-    Renderer::Theme: StyleSheet,
+    Theme: StyleSheet,
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
@@ -134,12 +135,11 @@ where
         tree.diff_children(std::slice::from_mut(&mut self.content))
     }
 
-    fn width(&self) -> Length {
-        self.width
-    }
-
-    fn height(&self) -> Length {
-        self.height
+    fn size(&self) -> Size<Length> {
+        Size {
+            width: self.width,
+            height: self.height,
+        }
     }
 
     fn layout(
@@ -148,21 +148,11 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let limits = limits.width(self.width).height(self.height);
-
-        let mut content = self
-            .content
-            .as_widget()
-            .layout(&mut tree.children[0], renderer, &limits);
-        let padding = self.padding.fit(content.size(), limits.max());
-        let size = limits
-            .pad(self.padding)
-            .resolve(content.size())
-            .pad(self.padding);
-
-        content.move_to(Point::new(padding.left, padding.top));
-
-        layout::Node::with_children(size, vec![content])
+        layout::padded(limits, self.width, self.height, self.padding, |limits| {
+            self.content
+                .as_widget()
+                .layout(&mut tree.children[0], renderer, limits)
+        })
     }
 
     fn on_event(
@@ -233,7 +223,7 @@ where
         &self,
         tree: &Tree,
         renderer: &mut Renderer,
-        theme: &Renderer::Theme,
+        theme: &Theme,
         renderer_style: &renderer::Style,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
@@ -247,13 +237,15 @@ where
             theme.default(&self.style)
         };
 
-        if styling.background.is_some() || styling.border_width > 0.0 {
+        if styling.background.is_some()
+            || styling.border.width > 0.0
+            || styling.shadow.color.a > 0.0
+        {
             renderer.fill_quad(
                 renderer::Quad {
                     bounds: layout.bounds(),
-                    border_radius: styling.border_radius,
-                    border_width: styling.border_width,
-                    border_color: styling.border_color,
+                    border: styling.border,
+                    shadow: styling.shadow,
                 },
                 styling
                     .background
@@ -297,7 +289,7 @@ where
         tree: &'b mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-    ) -> Option<overlay::Element<'b, Message, Renderer>> {
+    ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
             layout.children().next().unwrap(),
@@ -314,14 +306,14 @@ where
     }
 }
 
-impl<'a, Message, Renderer> From<SelectionField<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, Message, Theme, Renderer> From<SelectionField<'a, Message, Theme, Renderer>>
+    for Element<'a, Message, Theme, Renderer>
 where
     Message: Clone + 'a,
     Renderer: iced_core::Renderer + 'a,
-    Renderer::Theme: StyleSheet,
+    Theme: StyleSheet + 'a,
 {
-    fn from(selection_field: SelectionField<'a, Message, Renderer>) -> Self {
+    fn from(selection_field: SelectionField<'a, Message, Theme, Renderer>) -> Self {
         Self::new(selection_field)
     }
 }
@@ -340,13 +332,13 @@ impl State {
     }
 }
 
-pub fn selection_field<'a, Message, Renderer>(
-    content: impl Into<Element<'a, Message, Renderer>>,
-) -> SelectionField<'a, Message, Renderer>
+pub fn selection_field<'a, Message, Theme, Renderer>(
+    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+) -> SelectionField<'a, Message, Theme, Renderer>
 where
     Renderer: iced_core::Renderer,
-    Renderer::Theme: StyleSheet,
-    <Renderer::Theme as StyleSheet>::Style: Default,
+    Theme: StyleSheet,
+    <Theme as StyleSheet>::Style: Default,
 {
     SelectionField::new(content)
 }

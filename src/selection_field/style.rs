@@ -1,33 +1,33 @@
 //! Change the apperance of a button.
-use iced_core::{Background, BorderRadius, Color};
+use iced_core::{Background, Border, Color, Shadow, Vector};
 use iced_style::Theme;
 
 /// The appearance of a button.
 #[derive(Debug, Clone, Copy)]
 pub struct Appearance {
+    /// The amount of offset to apply to the shadow of the
+    pub shadow_offset: Vector,
     /// The [`Background`] of the button.
     pub background: Option<Background>,
-    /// The border radius of the button.
-    pub border_radius: BorderRadius,
-    /// The border width of the button.
-    pub border_width: f32,
-    /// The border [`Color`] of the button.
-    pub border_color: Color,
     /// The icon [`Color`] of the button.
     pub icon_color: Option<Color>,
     /// The text [`Color`] of the button.
     pub text_color: Color,
+    /// The [`Border`] of the buton.
+    pub border: Border,
+    /// The [`Shadow`] of the
+    pub shadow: Shadow,
 }
 
 impl std::default::Default for Appearance {
     fn default() -> Self {
         Self {
+            shadow_offset: Vector::default(),
             background: None,
-            border_radius: 0.0.into(),
-            border_width: 0.0,
-            border_color: Color::TRANSPARENT,
             icon_color: None,
             text_color: Color::WHITE,
+            border: Border::default(),
+            shadow: Shadow::default(),
         }
     }
 }
@@ -70,12 +70,16 @@ impl StyleSheet for Theme {
 
     fn selected(&self, _style: &Self::Style) -> Appearance {
         Appearance {
+            shadow_offset: Vector::default(),
             background: Some(Background::Color(Color::from_rgba(0.0, 0.07, 0.42, 1.0))),
-            border_radius: 5.5.into(),
-            border_width: 1.0,
-            border_color: Color::WHITE,
             icon_color: None,
             text_color: Color::WHITE,
+            border: Border {
+                color: Color::WHITE,
+                width: 1.0,
+                radius: 5.5.into(),
+            },
+            shadow: Shadow::default(),
         }
     }
 }

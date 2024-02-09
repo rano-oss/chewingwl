@@ -11,6 +11,7 @@ use chewing::{
 };
 use iced::{
     event::{self, listen_raw, wayland::InputMethodEvent},
+    keyboard::key::Named,
     wayland::{
         actions::{
             input_method::ActionInner, input_method_popup::InputMethodPopupSettings,
@@ -25,8 +26,9 @@ use iced::{
 };
 use iced_core::{
     event::wayland::{InputMethodKeyboardEvent, KeyEvent, Modifiers, RawModifiers},
-    keyboard::KeyCode,
+    keyboard::Key,
     window::Id,
+    Border,
 };
 use iced_style::application;
 use selection_field::widget::selection_field;
@@ -145,8 +147,8 @@ impl InputMethod {
 pub enum Message {
     Activate,
     Deactivate,
-    KeyPressed(KeyEvent, KeyCode, Modifiers),
-    KeyReleased(KeyEvent, KeyCode, Modifiers),
+    KeyPressed(KeyEvent, Key, Modifiers),
+    KeyReleased(KeyEvent, Key, Modifiers),
     Modifiers(Modifiers, RawModifiers),
     UpdatePopup { page: usize, index: usize },
     ClosePopup,
@@ -180,7 +182,7 @@ impl Application for InputMethod {
                 preedit_len: 0,
                 pages: Vec::new(),
                 max_candidates: 10,
-                max_pages: 3,
+                max_pages: 4,
                 popup: false,
                 passthrough_mode: false,
             },
@@ -205,15 +207,15 @@ impl Application for InputMethod {
                 self.state = State::PassThrough;
                 hide_input_method_popup()
             }
-            Message::KeyPressed(key, key_code, modifiers) => match self.state {
-                State::PreEdit => match key_code {
-                    KeyCode::Backspace => {
+            Message::KeyPressed(key_event, key, modifiers) => match self.state {
+                State::PreEdit => match key {
+                    Key::Named(Named::Backspace) => {
                         self.chewing.editor.process_keyevent(
                             self.chewing.keyboard.map(keyboard::KeyCode::Backspace),
                         );
                         self.preedit_string()
                     }
-                    KeyCode::Space => {
+                    Key::Named(Named::Space) => {
                         if modifiers.shift {
                             self.chewing.editor.process_keyevent(
                                 self.chewing
@@ -227,46 +229,46 @@ impl Application for InputMethod {
                         }
                         self.preedit_string()
                     }
-                    KeyCode::Enter => self.commit_string(),
-                    KeyCode::Escape => {
+                    Key::Named(Named::Enter) => self.commit_string(),
+                    Key::Named(Named::Escape) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                         self.preedit_string()
                     }
-                    KeyCode::Delete => {
+                    Key::Named(Named::Delete) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Del));
                         self.preedit_string()
                     }
-                    KeyCode::Left => {
+                    Key::Named(Named::ArrowLeft) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Left));
                         self.preedit_string()
                     }
-                    KeyCode::Right => {
+                    Key::Named(Named::ArrowRight) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Right));
                         self.preedit_string()
                     }
-                    KeyCode::Down => self.open_popup(),
-                    KeyCode::Up => {
+                    Key::Named(Named::ArrowDown) => self.open_popup(),
+                    Key::Named(Named::ArrowUp) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Up));
                         self.preedit_string()
                     }
-                    KeyCode::Tab => {
+                    Key::Named(Named::Tab) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Tab));
                         self.preedit_string()
                     }
                     _ => {
-                        if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
+                        if let Some(char) = key_event.utf8.as_ref().and_then(|s| s.chars().last()) {
                             self.chewing
                                 .editor
                                 .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
@@ -276,8 +278,8 @@ impl Application for InputMethod {
                         }
                     }
                 },
-                State::Popup => match key_code {
-                    KeyCode::Key1 => {
+                State::Popup => match key.as_ref() {
+                    Key::Character("1") => {
                         let _ = self
                             .chewing
                             .editor
@@ -296,7 +298,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key2 => {
+                    Key::Character("2") => {
                         let _ = self
                             .chewing
                             .editor
@@ -315,7 +317,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key3 => {
+                    Key::Character("3") => {
                         let _ = self
                             .chewing
                             .editor
@@ -334,7 +336,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key4 => {
+                    Key::Character("4") => {
                         let _ = self
                             .chewing
                             .editor
@@ -353,7 +355,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key5 => {
+                    Key::Character("5") => {
                         let _ = self
                             .chewing
                             .editor
@@ -372,7 +374,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key6 => {
+                    Key::Character("6") => {
                         let _ = self
                             .chewing
                             .editor
@@ -391,7 +393,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key7 => {
+                    Key::Character("7") => {
                         let _ = self
                             .chewing
                             .editor
@@ -410,7 +412,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key8 => {
+                    Key::Character("8") => {
                         let _ = self
                             .chewing
                             .editor
@@ -429,7 +431,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key9 => {
+                    Key::Character("9") => {
                         let _ = self
                             .chewing
                             .editor
@@ -448,7 +450,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Key0 => {
+                    Key::Character("0") => {
                         let _ = self
                             .chewing
                             .editor
@@ -467,7 +469,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Down => {
+                    Key::Named(Named::ArrowDown) => {
                         if self.index < min(self.candidates.len(), self.max_candidates) - 1 {
                             self.index += 1;
                         } else if self.index == min(self.candidates.len(), self.max_candidates) - 1
@@ -485,24 +487,26 @@ impl Application for InputMethod {
                         }
                         Command::none()
                     }
-                    KeyCode::Up => {
+                    Key::Named(Named::ArrowUp) => {
                         if self.index > 0 {
                             self.index -= 1;
                         }
                         Command::none()
                     }
-                    KeyCode::Left => {
+                    Key::Named(Named::ArrowLeft) => {
                         if self.page > 0 {
                             self.page -= 1;
                         }
                         Command::none()
                     }
-                    KeyCode::Right => {
-                        let num_pages = (self.candidates.len() as f32 / self.max_candidates as f32)
-                            .ceil() as usize;
-                        if num_pages > 1 {
+                    Key::Named(Named::ArrowRight) => {
+                        let num_pages = self.chewing.editor.total_page().unwrap();
+                        if num_pages > 1 && self.page < num_pages - 1 {
                             let mut pages = Vec::new();
-                            for page_index in 0..min(num_pages, self.max_pages + 1) {
+                            let pages_index = self.page / (self.max_pages - 1);
+                            dbg!(pages_index);
+                            let min_pages = min(num_pages, self.max_pages);
+                            for page_index in pages_index * min_pages..pages_index + 1 * min_pages {
                                 let page = self.candidates[page_index * self.max_candidates
                                     ..min(
                                         (page_index + 1) * self.max_candidates,
@@ -516,7 +520,7 @@ impl Application for InputMethod {
                         }
                         Command::none()
                     }
-                    KeyCode::Enter => {
+                    Key::Named(Named::Enter) => {
                         let _ = self
                             .chewing
                             .editor
@@ -535,7 +539,7 @@ impl Application for InputMethod {
                             hide_input_method_popup(),
                         ])
                     }
-                    KeyCode::Escape => {
+                    Key::Named(Named::Escape) => {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
@@ -561,33 +565,31 @@ impl Application for InputMethod {
                 }
                 State::PassThrough => {
                     if self.passthrough_mode {
-                        if key_code == KeyCode::RShift || key_code == KeyCode::LShift {
+                        if key == Key::Named(Named::Shift) {
                             self.passthrough_mode = !self.passthrough_mode;
                             Command::none()
                         } else {
-                            dbg!("first");
-                            virtual_keyboard_action(VKActionInner::KeyPressed(key))
+                            virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                         }
-                    } else if key_code == KeyCode::RShift || key_code == KeyCode::LShift {
+                    } else if key == Key::Named(Named::Shift) {
                         self.passthrough_mode = !self.passthrough_mode;
                         Command::none()
-                    } else if let Some(char) = key.utf8.as_ref().and_then(|s| s.chars().last()) {
+                    } else if let Some(char) =
+                        key_event.utf8.as_ref().and_then(|s| s.chars().last())
+                    {
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
                         if self.chewing.preedit().is_empty() {
                             if !self.passthrough_mode {
-                                dbg!("passthrough reset");
                                 self.passthrough_mode = true;
                             }
-                            dbg!("here?");
-                            virtual_keyboard_action(VKActionInner::KeyPressed(key))
+                            virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                         } else {
                             self.preedit_string()
                         }
                     } else {
-                        dbg!("last");
-                        virtual_keyboard_action(VKActionInner::KeyPressed(key))
+                        virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                     }
                 }
             },
@@ -673,14 +675,14 @@ impl Application for InputMethod {
                                 .on_select(Message::UpdatePopup { page, index })
                                 .into()
                             })
-                            .collect(),
+                            .collect::<Vec<_>>(),
                     )
                     .spacing(5.0)
                     .padding(5.0)
                     .align_items(Alignment::Center)
                     .into()
                 })
-                .collect())
+                .collect::<Vec<_>>())
             .padding(2.0),
         )
         .padding(5.0)
@@ -691,7 +693,6 @@ impl Application for InputMethod {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        dbg!(&self.state);
         listen_raw(|event, status| match (event.clone(), status) {
             (
                 Event::PlatformSpecific(event::PlatformSpecific::Wayland(
@@ -739,9 +740,11 @@ impl container::StyleSheet for CustomTheme {
 
     fn appearance(&self, _style: &Self::Style) -> container::Appearance {
         container::Appearance {
-            border_color: Color::from_rgb(1.0, 1.0, 1.0),
-            border_radius: 10.0.into(),
-            border_width: 3.0,
+            border: Border {
+                color: Color::from_rgb(1.0, 1.0, 1.0),
+                width: 3.0,
+                radius: 10.0.into(),
+            },
             background: Some(Color::from_rgb(0.0, 0.0, 0.0).into()),
             ..container::Appearance::default()
         }
