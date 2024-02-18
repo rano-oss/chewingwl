@@ -280,10 +280,7 @@ impl Application for InputMethod {
                 },
                 State::Popup => match key.as_ref() {
                     Key::Character("1") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 0);
+                        let _ = self.chewing.editor.select(self.page * self.max_candidates);
                         self.current_preedit = self.chewing.preedit();
                         self.state = State::WaitingForDone;
                         self.popup = false;
@@ -500,22 +497,26 @@ impl Application for InputMethod {
                         Command::none()
                     }
                     Key::Named(Named::ArrowRight) => {
-                        let num_pages = self.chewing.editor.total_page().unwrap();
-                        if num_pages > 1 && self.page < num_pages - 1 {
+                        let total_pages = self.chewing.editor.total_page().unwrap();
+                        if total_pages > 1 && (self.page == self.max_pages - 1 || self.page == 0) {
                             let mut pages = Vec::new();
-                            let pages_index = self.page / (self.max_pages - 1);
-                            dbg!(pages_index);
-                            let min_pages = min(num_pages, self.max_pages);
-                            for page_index in pages_index * min_pages..pages_index + 1 * min_pages {
-                                let page = self.candidates[page_index * self.max_candidates
+                            let page_index = self.page / (self.max_pages - 1);
+                            let num_rows =
+                                min(total_pages - self.max_pages * page_index, self.max_pages);
+                            let page_size = self.max_candidates * self.max_pages;
+                            for p_i in 0..num_rows {
+                                let page = self.candidates[p_i * self.max_candidates
+                                    + page_index * page_size
                                     ..min(
-                                        (page_index + 1) * self.max_candidates,
+                                        (p_i + 1) * self.max_candidates + page_index * page_size,
                                         self.candidates.len(),
                                     )]
                                     .to_vec();
                                 pages.push(page);
                             }
                             self.pages = pages;
+                        }
+                        if self.page < total_pages - 1 {
                             self.page += 1;
                         }
                         Command::none()
@@ -657,7 +658,7 @@ impl Application for InputMethod {
                                     row(vec![
                                         text((index + 1) % 10)
                                             .size(50)
-                                            .style(if page != self.page {
+                                            .style(if page != self.page % self.max_pages {
                                                 Color::TRANSPARENT
                                             } else {
                                                 Color::WHITE
@@ -670,7 +671,7 @@ impl Application for InputMethod {
                                     .spacing(4.0),
                                 )
                                 .set_indexes(page, index)
-                                .selected(self.page, self.index)
+                                .selected(self.page % self.max_pages, self.index)
                                 .on_press(Message::ClosePopup)
                                 .on_select(Message::UpdatePopup { page, index })
                                 .into()
