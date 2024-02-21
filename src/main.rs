@@ -68,9 +68,7 @@ impl Chewing {
     }
 
     fn preedit(&self) -> String {
-        let mut b1 = self.editor.display();
-        let b2 = b1.split_off(self.editor.cursor() * 3);
-        format!("{}{}{}", b1, self.editor.syllable_buffer(), b2)
+        format!("{}{}", self.editor.display(), self.editor.syllable_buffer())
     }
 }
 
@@ -467,9 +465,10 @@ impl Application for InputMethod {
                         ])
                     }
                     Key::Named(Named::ArrowDown) => {
-                        if self.index < min(self.candidates.len(), self.max_candidates) - 1 {
-                            self.index += 1;
-                        } else if self.index == min(self.candidates.len(), self.max_candidates) - 1
+                        let total_pages = self.chewing.editor.total_page().unwrap();
+                        if self.index == min(self.candidates.len(), self.max_candidates) - 1
+                            || (self.page == total_pages - 1
+                                && self.index == self.candidates.len() % self.max_candidates - 1)
                         {
                             self.chewing.editor.process_keyevent(
                                 self.chewing.keyboard.map(keyboard::KeyCode::Down),
@@ -481,19 +480,33 @@ impl Application for InputMethod {
                             self.pages = vec![self.candidates
                                 [0..min(self.max_candidates, self.candidates.len())]
                                 .to_vec()];
+                        } else if self.page == total_pages - 1 {
+                            self.index =
+                                min(self.candidates.len() % self.max_candidates, self.index + 1)
+                        } else {
+                            self.index += 1
                         }
                         Command::none()
                     }
                     Key::Named(Named::ArrowUp) => {
-                        if self.index > 0 {
-                            self.index -= 1;
-                        }
+                        self.index = self.index.saturating_sub(1);
                         Command::none()
                     }
                     Key::Named(Named::ArrowLeft) => {
-                        if self.page > 0 {
-                            self.page -= 1;
+                        if self.page != 0 && self.page % self.max_pages == 0 {
+                            let mut pages = Vec::new();
+                            let page_index = self.page / (self.max_pages - 1) - 1;
+                            let page_size = self.max_candidates * self.max_pages;
+                            for p_i in 0..self.max_pages {
+                                let page = self.candidates[p_i * self.max_candidates
+                                    + page_index * page_size
+                                    ..(p_i + 1) * self.max_candidates + page_index * page_size]
+                                    .to_vec();
+                                pages.push(page);
+                            }
+                            self.pages = pages;
                         }
+                        self.page = self.page.saturating_sub(1);
                         Command::none()
                     }
                     Key::Named(Named::ArrowRight) => {
@@ -516,8 +529,10 @@ impl Application for InputMethod {
                             }
                             self.pages = pages;
                         }
-                        if self.page < total_pages - 1 {
-                            self.page += 1;
+                        self.page = min(self.page + 1, total_pages - 1);
+                        if self.page == total_pages - 1 {
+                            self.index =
+                                min(self.index, self.candidates.len() % self.max_candidates - 1);
                         }
                         Command::none()
                     }
@@ -561,7 +576,7 @@ impl Application for InputMethod {
                 },
                 State::WaitingForDone => {
                     // Do nothing if text input client is not ready
-                    // TODO: add timer for misbehaving clients
+                    // TODO: add timer for misbehaving/slow/laggy clients
                     Command::none()
                 }
                 State::PassThrough => {

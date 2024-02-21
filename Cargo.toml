@@ -15,4 +15,6 @@ chewing = { git = "https://github.com/chewing/libchewing.git" }
 [profile.release]
 lto = true
 strip = true
-opt-level = "s"
+opt-level = "s" #try also z
+# panic = "abort"
+# codegen-units = 1

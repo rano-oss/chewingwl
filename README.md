@@ -1,7 +1,7 @@
 # chewingwl
 
 ## Work left until alpha release
-- [ ] Expanded list navigation
+- [x] Expanded list navigation
 - [x] Multiple to single Character select
 - [x] Number Key select
 - [x] Shift language change
