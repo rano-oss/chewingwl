@@ -11,6 +11,7 @@
 - [ ] Better shift mechanic?
 - [ ] Wide mode chinese
 - [ ] Clean state on deactivate/activate
+- [ ] Shadows
 
 ## Work left until 1.0
 - [ ] Config gui
