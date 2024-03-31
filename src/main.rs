@@ -32,7 +32,7 @@ use iced_core::{
 };
 use iced_style::application;
 use selection_field::widget::selection_field;
-use std::{cmp::min, fmt::Debug};
+use std::{char, cmp::min, fmt::Debug};
 mod selection_field;
 
 fn main() -> iced::Result {
@@ -89,12 +89,20 @@ struct InputMethod {
 }
 
 impl InputMethod {
+    fn set_cursor_position(&mut self) {
+        let chars: Vec<char> = self.current_preedit.chars().collect();
+        self.cursor_position = chars[..self.chewing.editor.cursor()]
+            .iter()
+            .collect::<String>()
+            .len()
+    }
+
     fn preedit_string(&mut self) -> Command<Message> {
         let preedit = self.chewing.preedit();
         self.preedit_len = preedit.len();
         self.current_preedit = preedit.clone();
         self.state = State::WaitingForDone;
-        self.cursor_position = self.chewing.editor.cursor() * 3;
+        self.set_cursor_position();
         Command::batch(vec![
             input_method_action(ActionInner::SetPreeditString {
                 string: preedit,
@@ -125,7 +133,7 @@ impl InputMethod {
         self.candidates = self.chewing.editor.all_candidates().unwrap_or_default();
         self.state = State::WaitingForDone;
         self.popup = true;
-        self.cursor_position = self.chewing.editor.cursor() * 3;
+        self.set_cursor_position();
         self.index = 0;
         self.page = 0;
         self.pages =
@@ -137,6 +145,26 @@ impl InputMethod {
                 cursor_end: self.cursor_position as i32,
             }),
             input_method_action(ActionInner::Commit),
+        ])
+    }
+
+    fn num_select(&mut self, index: usize) -> Command<Message> {
+        let _ = self
+            .chewing
+            .editor
+            .select(self.page * self.max_candidates + index);
+        self.current_preedit = self.chewing.preedit();
+        self.state = State::WaitingForDone;
+        self.popup = false;
+        self.set_cursor_position();
+        Command::batch(vec![
+            input_method_action(ActionInner::SetPreeditString {
+                string: self.chewing.preedit(),
+                cursor_begin: self.cursor_position as i32,
+                cursor_end: self.cursor_position as i32,
+            }),
+            input_method_action(ActionInner::Commit),
+            hide_input_method_popup(),
         ])
     }
 }
@@ -277,193 +305,16 @@ impl Application for InputMethod {
                     }
                 },
                 State::Popup => match key.as_ref() {
-                    Key::Character("1") => {
-                        let _ = self.chewing.editor.select(self.page * self.max_candidates);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("2") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 1);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("3") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 2);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("4") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 3);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("5") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 4);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("6") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 5);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("7") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 6);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("8") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 7);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("9") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 8);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
-                    Key::Character("0") => {
-                        let _ = self
-                            .chewing
-                            .editor
-                            .select(self.page * self.max_candidates + 9);
-                        self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
-                        self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
-                        Command::batch(vec![
-                            input_method_action(ActionInner::SetPreeditString {
-                                string: self.chewing.preedit(),
-                                cursor_begin: self.cursor_position as i32,
-                                cursor_end: self.cursor_position as i32,
-                            }),
-                            input_method_action(ActionInner::Commit),
-                            hide_input_method_popup(),
-                        ])
-                    }
+                    Key::Character("1") => self.num_select(0),
+                    Key::Character("2") => self.num_select(1),
+                    Key::Character("3") => self.num_select(2),
+                    Key::Character("4") => self.num_select(3),
+                    Key::Character("5") => self.num_select(4),
+                    Key::Character("6") => self.num_select(5),
+                    Key::Character("7") => self.num_select(6),
+                    Key::Character("8") => self.num_select(7),
+                    Key::Character("9") => self.num_select(8),
+                    Key::Character("0") => self.num_select(9),
                     Key::Named(Named::ArrowDown) => {
                         let total_pages = self.chewing.editor.total_page().unwrap();
                         if self.index == min(self.candidates.len(), self.max_candidates) - 1
@@ -544,7 +395,7 @@ impl Application for InputMethod {
                         self.current_preedit = self.chewing.preedit();
                         self.state = State::WaitingForDone;
                         self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        self.set_cursor_position();
                         Command::batch(vec![
                             input_method_action(ActionInner::SetPreeditString {
                                 string: self.chewing.preedit(),
@@ -561,7 +412,7 @@ impl Application for InputMethod {
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
                         self.state = State::PreEdit;
                         self.popup = false;
-                        self.cursor_position = self.chewing.editor.cursor() * 3;
+                        self.set_cursor_position();
                         Command::batch(vec![
                             input_method_action(ActionInner::SetPreeditString {
                                 string: self.chewing.preedit(),
@@ -644,7 +495,7 @@ impl Application for InputMethod {
                 self.current_preedit = self.chewing.preedit();
                 self.state = State::WaitingForDone;
                 self.popup = false;
-                self.cursor_position = self.chewing.editor.cursor() * 3;
+                self.set_cursor_position();
                 Command::batch(vec![
                     input_method_action(ActionInner::SetPreeditString {
                         string: self.chewing.preedit(),

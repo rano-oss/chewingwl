@@ -7,7 +7,7 @@
 - [x] Shift language change
 
 ## Work left for beta release
-- [ ] Replace magic number 3 with actual counting of bytes for cursor
+- [x] Replace magic number 3 with actual counting of bytes for cursor
 - [ ] Better shift mechanic?
 - [ ] Wide mode chinese
 - [ ] Clean state on deactivate/activate
