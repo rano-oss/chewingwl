@@ -8,7 +8,7 @@
 
 ## Work left for beta release
 - [x] Replace magic number 3 with actual counting of bytes for cursor
-- [ ] Better shift mechanic?
+- [x] Better shift mechanic?
 - [ ] Wide mode chinese
 - [ ] Clean state on deactivate/activate
 - [ ] Shadows

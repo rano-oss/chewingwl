@@ -85,6 +85,7 @@ struct InputMethod {
     max_candidates: usize,
     max_pages: usize,
     popup: bool,
+    shift_set: bool,
     passthrough_mode: bool,
 }
 
@@ -210,6 +211,7 @@ impl Application for InputMethod {
                 max_candidates: 10,
                 max_pages: 4,
                 popup: false,
+                shift_set: false,
                 passthrough_mode: false,
             },
             Command::none(),
@@ -433,35 +435,43 @@ impl Application for InputMethod {
                 State::PassThrough => {
                     if self.passthrough_mode {
                         if key == Key::Named(Named::Shift) {
-                            self.passthrough_mode = !self.passthrough_mode;
+                            self.shift_set = true;
                             Command::none()
                         } else {
+                            self.shift_set = false;
                             virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                         }
                     } else if key == Key::Named(Named::Shift) {
-                        self.passthrough_mode = !self.passthrough_mode;
+                        self.shift_set = true;
                         Command::none()
                     } else if let Some(char) =
                         key_event.utf8.as_ref().and_then(|s| s.chars().last())
                     {
+                        self.shift_set = false;
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map_ascii(char as u8));
                         if self.chewing.preedit().is_empty() {
-                            if !self.passthrough_mode {
-                                self.passthrough_mode = true;
-                            }
                             virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                         } else {
                             self.preedit_string()
                         }
                     } else {
+                        self.shift_set = false;
                         virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
                     }
                 }
             },
-            Message::KeyReleased(key, _key_code, _modifiers) => match self.state {
-                State::PassThrough => virtual_keyboard_action(VKActionInner::KeyReleased(key)),
+            Message::KeyReleased(key_event, key, _modifiers) => match self.state {
+                State::PassThrough => {
+                    if key == Key::Named(Named::Shift) && self.shift_set {
+                        self.shift_set = false;
+                        self.passthrough_mode = !self.passthrough_mode;
+                        Command::none()
+                    } else {
+                        virtual_keyboard_action(VKActionInner::KeyReleased(key_event))
+                    }
+                }
                 State::PreEdit | State::Popup | State::WaitingForDone => Command::none(),
             },
             Message::Modifiers(_modifiers, raw_modifiers) => {
