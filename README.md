@@ -10,7 +10,7 @@
 - [x] Replace magic number 3 with actual counting of bytes for cursor
 - [x] Better shift mechanic?
 - [ ] Wide mode chinese
-- [ ] Clean state on deactivate/activate
+- [x] Clean state on deactivate/activate
 - [ ] Shadows
 
 ## Work left until 1.0

@@ -229,9 +229,7 @@ impl Application for InputMethod {
                 Command::none()
             }
             Message::Deactivate => {
-                self.chewing
-                    .editor
-                    .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
+                self.chewing.editor.clear();
                 self.state = State::PassThrough;
                 hide_input_method_popup()
             }
@@ -250,15 +248,17 @@ impl Application for InputMethod {
                                     .keyboard
                                     .map_with_mod(keyboard::KeyCode::Space, Mods::shift()),
                             );
+                            Command::none()
                         } else {
                             self.chewing.editor.process_keyevent(
                                 self.chewing.keyboard.map(keyboard::KeyCode::Space),
                             );
+                            self.preedit_string()
                         }
-                        self.preedit_string()
                     }
                     Key::Named(Named::Enter) => self.commit_string(),
                     Key::Named(Named::Escape) => {
+                        self.chewing.editor.clear();
                         self.chewing
                             .editor
                             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Esc));
