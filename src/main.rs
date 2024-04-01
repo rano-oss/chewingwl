@@ -444,6 +444,18 @@ impl Application for InputMethod {
                     } else if key == Key::Named(Named::Shift) {
                         self.shift_set = true;
                         Command::none()
+                    } else if key == Key::Named(Named::Space) {
+                        self.shift_set = false;
+                        if modifiers.shift {
+                            self.chewing.editor.process_keyevent(
+                                self.chewing
+                                    .keyboard
+                                    .map_with_mod(keyboard::KeyCode::Space, Mods::shift()),
+                            );
+                            Command::none()
+                        } else {
+                            virtual_keyboard_action(VKActionInner::KeyPressed(key_event))
+                        }
                     } else if let Some(char) =
                         key_event.utf8.as_ref().and_then(|s| s.chars().last())
                     {
