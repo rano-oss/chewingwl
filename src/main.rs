@@ -1,6 +1,6 @@
 use chewing::{
     conversion::ChewingEngine,
-    dictionary::{LayeredDictionary, SystemDictionaryLoader, UserDictionaryLoader},
+    dictionary::{Layered, SystemDictionaryLoader, UserDictionaryLoader},
     editor::{
         keyboard::{self, AnyKeyboardLayout, KeyboardLayout, Modifiers as Mods, Qwerty},
         // syllable::KeyboardLayoutCompat,
@@ -46,20 +46,28 @@ fn main() -> iced::Result {
 
 struct Chewing {
     // kb_compat: KeyboardLayoutCompat,
-    editor: Editor<ChewingEngine>,
+    editor: Editor,
     keyboard: AnyKeyboardLayout,
 }
 
 impl Chewing {
     fn new() -> Self {
-        let dictionaries = SystemDictionaryLoader::new().load().unwrap_or_default();
-        let user_dictionary = UserDictionaryLoader::new().load().unwrap();
-        let estimate = LaxUserFreqEstimate::open(user_dictionary.as_ref());
-        let dict = LayeredDictionary::new(dictionaries, user_dictionary);
-        let engine = ChewingEngine::new();
-        // let kb_compat = KeyboardLayoutCompat::Default;
+        let sys_loader = SystemDictionaryLoader::new();
+        let dictionaries = sys_loader.load().expect("System dictionary not found");
+        let user_dictionary = UserDictionaryLoader::new()
+            .load()
+            .expect("User dictionary not found");
+        let abbrev = sys_loader
+            .load_abbrev()
+            .expect("Failed to load abbreviation table");
+        let estimate = LaxUserFreqEstimate::max_from(user_dictionary.as_ref());
+        let dict = Layered::new(dictionaries, user_dictionary);
+        let conversion_engine = Box::new(ChewingEngine::new());
+        let sym_sel = sys_loader
+            .load_symbol_selector()
+            .expect("Failed to load symbol table");
         let keyboard = AnyKeyboardLayout::Qwerty(Qwerty);
-        let editor = Editor::new(engine, dict, estimate.unwrap());
+        let editor = Editor::new(conversion_engine, dict, estimate, abbrev, sym_sel);
         Chewing {
             // kb_compat,
             editor,

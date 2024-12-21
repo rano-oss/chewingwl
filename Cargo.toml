@@ -10,7 +10,7 @@ iced_core = { git = "https://github.com/rano-oss/iced", branch = "input_method_a
 iced_renderer = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 iced_runtime = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
 env_logger = "0.10"
-chewing = { git = "https://github.com/chewing/libchewing.git" }
+chewing = "0.9"
 
 [profile.release]
 lto = true
