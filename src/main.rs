@@ -1,14 +1,14 @@
+#[cfg(feature = "pinyin")]
+use chewing::editor::zhuyin_layout::Pinyin;
 use chewing::{
     conversion::ChewingEngine,
     dictionary::{Layered, SystemDictionaryLoader, UserDictionaryLoader},
     editor::{
         keyboard::{self, AnyKeyboardLayout, KeyboardLayout, Modifiers as Mods, Qwerty},
-        // syllable::KeyboardLayoutCompat,
-        BasicEditor,
-        Editor,
-        LaxUserFreqEstimate,
+        BasicEditor, Editor, LaxUserFreqEstimate,
     },
 };
+
 use iced::{
     event::{self, listen_raw, wayland::InputMethodEvent},
     keyboard::key::Named,
@@ -67,6 +67,11 @@ impl Chewing {
             .load_symbol_selector()
             .expect("Failed to load symbol table");
         let keyboard = AnyKeyboardLayout::Qwerty(Qwerty);
+        #[cfg(feature = "pinyin")]
+        let mut editor = Editor::new(conversion_engine, dict, estimate, abbrev, sym_sel);
+        #[cfg(feature = "pinyin")]
+        editor.set_syllable_editor(Box::new(Pinyin::hanyu()));
+        #[cfg(not(feature = "pinyin"))]
         let editor = Editor::new(conversion_engine, dict, estimate, abbrev, sym_sel);
         Chewing {
             // kb_compat,
@@ -76,7 +81,11 @@ impl Chewing {
     }
 
     fn preedit(&self) -> String {
-        format!("{}{}", self.editor.display(), self.editor.syllable_buffer())
+        format!(
+            "{}{}",
+            self.editor.display(),
+            self.editor.syllable_buffer_display()
+        )
     }
 }
 
