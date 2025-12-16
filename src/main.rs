@@ -45,7 +45,6 @@ fn main() -> iced::Result {
 }
 
 struct Chewing {
-    // kb_compat: KeyboardLayoutCompat,
     editor: Editor,
     keyboard: AnyKeyboardLayout,
 }
@@ -73,11 +72,7 @@ impl Chewing {
         editor.set_syllable_editor(Box::new(Pinyin::hanyu()));
         #[cfg(not(feature = "pinyin"))]
         let editor = Editor::new(conversion_engine, dict, estimate, abbrev, sym_sel);
-        Chewing {
-            // kb_compat,
-            editor,
-            keyboard,
-        }
+        Chewing { editor, keyboard }
     }
 
     fn preedit(&self) -> String {
@@ -119,7 +114,7 @@ impl InputMethod {
         let preedit = self.chewing.preedit();
         self.preedit_len = preedit.len();
         self.current_preedit = preedit.clone();
-        self.state = State::WaitingForDone;
+        self.state = State::PreEdit;
         self.set_cursor_position();
         Command::batch(vec![
             input_method_action(ActionInner::SetPreeditString {
@@ -149,7 +144,7 @@ impl InputMethod {
             .editor
             .process_keyevent(self.chewing.keyboard.map(keyboard::KeyCode::Down));
         self.candidates = self.chewing.editor.all_candidates().unwrap_or_default();
-        self.state = State::WaitingForDone;
+        self.state = State::Popup;
         self.popup = true;
         self.set_cursor_position();
         self.index = 0;
@@ -163,6 +158,7 @@ impl InputMethod {
                 cursor_end: self.cursor_position as i32,
             }),
             input_method_action(ActionInner::Commit),
+            show_input_method_popup(),
         ])
     }
 
@@ -172,7 +168,11 @@ impl InputMethod {
             .editor
             .select(self.page * self.max_candidates + index);
         self.current_preedit = self.chewing.preedit();
-        self.state = State::WaitingForDone;
+        self.state = if !self.current_preedit.is_empty() {
+            State::PreEdit
+        } else {
+            State::PassThrough
+        };
         self.popup = false;
         self.set_cursor_position();
         Command::batch(vec![
@@ -203,7 +203,6 @@ pub enum Message {
 enum State {
     PreEdit,
     Popup,
-    WaitingForDone,
     PassThrough,
 }
 
@@ -412,7 +411,11 @@ impl Application for InputMethod {
                             .editor
                             .select(self.page * self.max_candidates + self.index);
                         self.current_preedit = self.chewing.preedit();
-                        self.state = State::WaitingForDone;
+                        self.state = if !self.current_preedit.is_empty() {
+                            State::PreEdit
+                        } else {
+                            State::PassThrough
+                        };
                         self.popup = false;
                         self.set_cursor_position();
                         Command::batch(vec![
@@ -444,11 +447,6 @@ impl Application for InputMethod {
                     }
                     _ => Command::none(),
                 },
-                State::WaitingForDone => {
-                    // Do nothing if text input client is not ready
-                    // TODO: add timer for misbehaving/slow/laggy clients
-                    Command::none()
-                }
                 State::PassThrough => {
                     if self.passthrough_mode {
                         if key == Key::Named(Named::Shift) {
@@ -501,26 +499,12 @@ impl Application for InputMethod {
                         virtual_keyboard_action(VKActionInner::KeyReleased(key_event))
                     }
                 }
-                State::PreEdit | State::Popup | State::WaitingForDone => Command::none(),
+                State::PreEdit | State::Popup => Command::none(),
             },
             Message::Modifiers(_modifiers, raw_modifiers) => {
                 virtual_keyboard_action(VKActionInner::Modifiers(raw_modifiers))
             }
-            Message::Done => match self.state {
-                State::WaitingForDone => {
-                    if self.popup {
-                        self.state = State::Popup;
-                        show_input_method_popup()
-                    } else if !self.current_preedit.is_empty() {
-                        self.state = State::PreEdit;
-                        Command::none()
-                    } else {
-                        self.state = State::PassThrough;
-                        Command::none()
-                    }
-                }
-                State::PreEdit | State::Popup | State::PassThrough => Command::none(),
-            },
+            Message::Done => Command::none(),
             Message::UpdatePopup { page, index } => {
                 self.page = page;
                 self.index = index;
@@ -532,7 +516,11 @@ impl Application for InputMethod {
                     .editor
                     .select(self.page * self.max_candidates + self.index);
                 self.current_preedit = self.chewing.preedit();
-                self.state = State::WaitingForDone;
+                self.state = if !self.current_preedit.is_empty() {
+                    State::PreEdit
+                } else {
+                    State::PassThrough
+                };
                 self.popup = false;
                 self.set_cursor_position();
                 Command::batch(vec![
@@ -548,7 +536,7 @@ impl Application for InputMethod {
         }
     }
 
-    fn view(&self, _id: window::Id) -> Element<Message> {
+    fn view(&self, _id: window::Id) -> Element<'_, Message> {
         container(
             row(self
                 .pages
