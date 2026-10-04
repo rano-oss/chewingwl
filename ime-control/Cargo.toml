@@ -1,0 +1,16 @@
+[package]
+name = "ime-control"
+version = "0.1.0"
+edition = "2021"
+description = "Portable D-Bus control API for Wayland IMEs (org.inputmethod.Control1)"
+license = "GPL-3.0-only"
+
+[dependencies]
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["sync", "rt", "macros"] }
+zbus = "5"
+
+[lib]
+name = "ime_control"
+path = "src/lib.rs"

@@ -3,21 +3,32 @@ name = "chewingwl"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "chewingwl"
+path = "src/main.rs"
+
 [dependencies]
-iced = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard", default-features = false, features = ["wayland", "debug", "wayland_input_method", "wayland_virtual_keyboard"] }
-iced_style = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
-iced_core = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
-iced_renderer = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
-iced_runtime = { git = "https://github.com/rano-oss/iced", branch = "input_method_and_virtual_keyboard" }
+libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start", features = ["wayland", "wayland_input_method", "winit"] }
+ime-control = { path = "ime-control" }
 env_logger = "0.10"
+log = "0.4"
 chewing = "0.9"
+zbus = "5"
+tokio = { version = "1", features = ["sync"] }
+serde = { version = "1", features = ["derive"] }
+libc = "0.2"
+# Pin wayland-client: 0.31.15 breaks sctk 0.20 / iced_winit frame() API
+wayland-client = "=0.31.14"
+wayland-cursor = "=0.31.14"
 
 [profile.release]
 lto = true
 strip = true
-opt-level = "s" #try also z
-# panic = "abort"
-# codegen-units = 1
+opt-level = "s"
 
-[features]
-pinyin = []
+[profile.dev.package."*"]
+opt-level = 2
+
+
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start" }
