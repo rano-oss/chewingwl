@@ -2491,6 +2491,7 @@ checksum = "edcd27d72f2f071c64249075f42e205ff93c9a4c5f6c6da53e79ed9f9832c285"
 [[package]]
 name = "ime-control"
 version = "0.1.0"
+source = "git+https://github.com/rano-oss/ime-control#7942c4f0bcf17f219cc029c13c7378f43aa94d0d"
 dependencies = [
  "log",
  "serde",

@@ -1,7 +1,7 @@
 //! Candidate popup rendering.
 
 use cosmic::iced::{self, Color};
-use cosmic::widget::{self, container, row, text};
+use cosmic::widget::{self, column, container, row, text};
 use cosmic::Element;
 
 use crate::state::InputMethodState;
@@ -61,9 +61,7 @@ pub fn view<'a>(state: &'a InputMethodState, _window: iced::window::Id) -> Eleme
                 .collect();
 
             if vertical {
-                widget::column(items)
-                    .spacing(spacing.space_xxxs)
-                    .into()
+                column(items).spacing(spacing.space_xxxs).into()
             } else {
                 row(items).spacing(spacing.space_xxxs).into()
             }

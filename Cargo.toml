@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start", features = ["wayland", "wayland_input_method", "winit"] }
-ime-control = { path = "ime-control" }
+ime-control = { git = "https://github.com/rano-oss/ime-control" }
 env_logger = "0.10"
 log = "0.4"
 chewing = "0.9"
