@@ -151,17 +151,47 @@ impl cosmic::Application for ChewingWl {
             Message::Activate => {
                 state.editor.clear();
                 state.index = 0;
+                state.shift_set = false;
+                state.resync_passthrough();
                 state.publish_mode_status();
+                log::info!(
+                    "activate english={} passthrough={} fullwidth={} mode={}",
+                    state.is_english_mode(),
+                    state.passthrough_mode,
+                    state.is_fullwidth(),
+                    state.mode_status_text()
+                );
                 wrap(input_method::set_popup_position_mode(PopupPositionMode::FollowCursor))
             }
             Message::Deactivate => {
+                log::info!(
+                    "deactivate english={} passthrough={} preedit={:?}",
+                    state.is_english_mode(),
+                    state.passthrough_mode,
+                    state.preedit()
+                );
                 let task = apply_switch_im_behavior(state);
                 state.index = 0;
+                state.shift_set = false;
                 state.reset_selection_view();
+                // Keep language/fullwidth sticky; passthrough is re-armed on Activate.
+                state.resync_passthrough();
                 wrap(task)
             }
             Message::KeyPressed(key_event, key, modifiers, serial) => {
-                let cmd = handle_key_press(state, key_event, key, modifiers, serial);
+                let utf8 = key_event.utf8.clone();
+                let keysym = key_event.keysym;
+                let raw_code = key_event.raw_code;
+                let cmd = handle_key_press(state, key_event, key.clone(), modifiers, serial);
+                let consumed = cmd.is_some();
+                log::info!(
+                    "press serial={serial} raw={raw_code} key={key:?} keysym={keysym:#x} utf8={utf8:?} \
+                     shift_set={} english={} passthrough={} preedit={:?} consumed={consumed}",
+                    state.shift_set,
+                    state.is_english_mode(),
+                    state.passthrough_mode,
+                    state.preedit()
+                );
                 if serial == 0 {
                     // Client-side repeat: no compositor event to filter
                     wrap(cmd.unwrap_or_else(Task::none))
@@ -174,18 +204,60 @@ impl cosmic::Application for ChewingWl {
             Message::KeyReleased(key_event, key, _modifiers, serial) => {
                 // 中/英 toggle must work while composing (in-IME English), not only
                 // when the buffer is empty.
-                let filter = if is_chi_eng_toggle_key(state, &key, &key_event) && state.shift_set {
+                let is_toggle = is_chi_eng_toggle_key(state, &key, &key_event);
+                let filter = if is_toggle && state.shift_set {
                     state.shift_set = false;
+                    let before = state.mode_status_text().to_string();
                     set_english_mode(state, !state.is_english_mode());
+                    log::info!(
+                        "shift-toggle serial={serial} {before} -> {} english={} passthrough={}",
+                        state.mode_status_text(),
+                        state.is_english_mode(),
+                        state.passthrough_mode
+                    );
                     true
                 } else {
+                    if is_toggle {
+                        log::info!(
+                            "shift-release serial={serial} ignored shift_set={} keysym={:#x}",
+                            state.shift_set,
+                            key_event.keysym
+                        );
+                    }
                     state.editor.is_selecting() || !state.preedit().is_empty()
                 };
                 wrap(input_method::filter_key(serial, filter))
             }
             Message::Modifiers(modifiers) => {
+                log::info!(
+                    "modifiers shift={} ctrl={} alt={} logo={} shift_set={}",
+                    modifiers.shift,
+                    modifiers.ctrl,
+                    modifiers.alt,
+                    modifiers.logo,
+                    state.shift_set
+                );
                 if state.config.sync_caps_lock == "Keyboard" {
                     set_english_mode(state, modifiers.caps_lock);
+                }
+                // Fallback: some seats deliver Shift only as modifiers (no Key press/release).
+                match state.config.chi_eng_mode_toggle.as_str() {
+                    "Disable" | "CapsLock" | "ShiftL" | "ShiftR" => {}
+                    _ => {
+                        if modifiers.shift {
+                            state.shift_set = true;
+                        } else if state.shift_set {
+                            state.shift_set = false;
+                            let before = state.mode_status_text().to_string();
+                            set_english_mode(state, !state.is_english_mode());
+                            log::info!(
+                                "shift-toggle via modifiers {before} -> {} english={} passthrough={}",
+                                state.mode_status_text(),
+                                state.is_english_mode(),
+                                state.passthrough_mode
+                            );
+                        }
+                    }
                 }
                 Task::none()
             }
@@ -561,15 +633,27 @@ fn turn_page(state: &mut InputMethodState, delta: isize) {
 
 fn process_ascii_char(state: &mut InputMethodState, key_event: &KeyEvent) -> Option<Task<Message>> {
     let ch = key_event.utf8.as_ref().and_then(|s| s.chars().last())?;
-    let ch = if state.is_english_mode() {
+    let mapped = if state.is_english_mode() {
         apply_english_case(&state.config, ch)
     } else {
         ch
     };
+    let ascii = mapped as u8;
+    log::info!(
+        "ascii-map ch={ch:?} U+{:04X} mapped={mapped:?} ascii={ascii:#x} english={}",
+        ch as u32,
+        state.is_english_mode()
+    );
     state
         .editor
-        .process_keyevent(state.keyboard.map_ascii(ch as u8));
-    Some(state.process_key_and_sync())
+        .process_keyevent(state.keyboard.map_ascii(ascii));
+    let task = state.process_key_and_sync();
+    log::info!(
+        "after-ascii preedit={:?} selecting={}",
+        state.preedit(),
+        state.editor.is_selecting()
+    );
+    Some(task)
 }
 
 fn handle_entering(
@@ -636,6 +720,11 @@ fn set_english_mode(state: &mut InputMethodState, english: bool) {
     }
 
     let prev_passthrough = state.passthrough_mode;
+    log::info!(
+        "set_english_mode want_english={english} mode_changed={mode_changed} \
+         prev_passthrough={prev_passthrough} preedit_empty={}",
+        state.preedit().is_empty()
+    );
     // Invariant: passthrough only when English AND preedit empty.
     // Non-empty preedit + 英 => in-IME English (keys update composition).
     if english {
@@ -689,7 +778,6 @@ fn apply_switch_im_behavior(state: &mut InputMethodState) -> Task<Message> {
         "CommitPreedit" => {
             let text = state.preedit();
             state.editor.clear();
-            state.passthrough_mode = false;
             if text.is_empty() {
                 Task::none()
             } else {
@@ -709,10 +797,9 @@ fn apply_switch_im_behavior(state: &mut InputMethodState) -> Task<Message> {
             let _ = state.editor.commit();
             state.process_key_and_sync()
         }
-        // "Clear" and unknown
+        // "Clear" and unknown — do not clear passthrough; Activate re-syncs it.
         _ => {
             state.editor.clear();
-            state.passthrough_mode = false;
             Task::batch([
                 input_method::reset_popup_size(),
                 input_method::set_preedit_string(String::new(), 0, 0),
@@ -722,19 +809,33 @@ fn apply_switch_im_behavior(state: &mut InputMethodState) -> Task<Message> {
     }
 }
 
-/// XKB keysyms for left/right Shift (libxkbcommon).
+/// Linux/evdev keycodes (same as wkb / keyboard-filter), not xkb.
+const EVDEV_SHIFT_L: u32 = 42;
+const EVDEV_SHIFT_R: u32 = 54;
+/// XKB keysyms for left/right Shift (libxkbcommon) — fallback only.
 const KEYSYM_SHIFT_L: u32 = 0xffe1;
 const KEYSYM_SHIFT_R: u32 = 0xffe2;
 
+fn is_shift_evdev(raw_code: u32) -> bool {
+    raw_code == EVDEV_SHIFT_L || raw_code == EVDEV_SHIFT_R
+}
+
 /// Check if the given key matches the configured Chinese/English mode toggle key
 fn is_chi_eng_toggle_key(state: &InputMethodState, key: &Key, key_event: &KeyEvent) -> bool {
+    let is_shift_key = is_shift_evdev(key_event.raw_code)
+        || key == &Key::Named(Named::Shift)
+        || key_event.keysym == KEYSYM_SHIFT_L
+        || key_event.keysym == KEYSYM_SHIFT_R;
     match state.config.chi_eng_mode_toggle.as_str() {
         "Disable" => false,
         "CapsLock" => key == &Key::Named(Named::CapsLock),
-        "ShiftL" => key == &Key::Named(Named::Shift) && key_event.keysym == KEYSYM_SHIFT_L,
-        "ShiftR" => key == &Key::Named(Named::Shift) && key_event.keysym == KEYSYM_SHIFT_R,
-        // "Shift" and unknown values: any Shift
-        _ => key == &Key::Named(Named::Shift),
+        "ShiftL" => {
+            key_event.raw_code == EVDEV_SHIFT_L || key_event.keysym == KEYSYM_SHIFT_L
+        }
+        "ShiftR" => {
+            key_event.raw_code == EVDEV_SHIFT_R || key_event.keysym == KEYSYM_SHIFT_R
+        }
+        _ => is_shift_key,
     }
 }
 

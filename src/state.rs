@@ -113,10 +113,15 @@ impl InputMethodState {
     }
 
     fn sync_passthrough_with_fullwidth(&mut self) {
-        if self.is_fullwidth() {
-            self.passthrough_mode = false;
-        } else if self.is_english_mode() && self.preedit().is_empty() {
+        self.resync_passthrough();
+    }
+
+    /// Passthrough only for 英 + empty buffer + halfwidth (fullwidth Latin needs chewing).
+    pub fn resync_passthrough(&mut self) {
+        if self.is_english_mode() && self.preedit().is_empty() && !self.is_fullwidth() {
             self.passthrough_mode = true;
+        } else {
+            self.passthrough_mode = false;
         }
     }
 
