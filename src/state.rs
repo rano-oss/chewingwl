@@ -25,7 +25,11 @@ pub struct InputMethodState {
     pub page: usize,
     pub editor: Editor,
     pub keyboard: AnyKeyboardLayout,
+    /// Pending 中/英 toggle on Shift release (cleared if another key is pressed).
     pub shift_set: bool,
+    /// Shift is down for this hold (key and/or modifiers). Prevents Modifiers from
+    /// re-arming `shift_set` after Shift+letter cancelled the toggle.
+    pub shift_held: bool,
     /// After an English-mode commit, keys bypass the editor until 中 is selected
     /// again (or English-in-preedit is re-entered via toggle while composing).
     pub passthrough_mode: bool,
