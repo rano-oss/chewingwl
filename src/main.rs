@@ -91,6 +91,7 @@ impl cosmic::Application for ChewingWl {
             editor: state::create_editor(),
             keyboard: AnyKeyboardLayout::Qwerty(Qwerty),
             shift_set: false,
+            shift_held: false,
             passthrough_mode: false,
             visible_page_offset: 0,
             num_visible_pages: 1,
@@ -152,6 +153,7 @@ impl cosmic::Application for ChewingWl {
                 state.editor.clear();
                 state.index = 0;
                 state.shift_set = false;
+                state.shift_held = false;
                 state.resync_passthrough();
                 state.publish_mode_status();
                 log::info!(
@@ -173,6 +175,7 @@ impl cosmic::Application for ChewingWl {
                 let task = apply_switch_im_behavior(state);
                 state.index = 0;
                 state.shift_set = false;
+                state.shift_held = false;
                 state.reset_selection_view();
                 // Keep language/fullwidth sticky; passthrough is re-armed on Activate.
                 state.resync_passthrough();
@@ -205,57 +208,68 @@ impl cosmic::Application for ChewingWl {
                 // 中/英 toggle must work while composing (in-IME English), not only
                 // when the buffer is empty.
                 let is_toggle = is_chi_eng_toggle_key(state, &key, &key_event);
-                let filter = if is_toggle && state.shift_set {
-                    state.shift_set = false;
-                    let before = state.mode_status_text().to_string();
-                    set_english_mode(state, !state.is_english_mode());
-                    log::info!(
-                        "shift-toggle serial={serial} {before} -> {} english={} passthrough={}",
-                        state.mode_status_text(),
-                        state.is_english_mode(),
-                        state.passthrough_mode
-                    );
-                    true
-                } else {
-                    if is_toggle {
+                let filter = if is_toggle {
+                    state.shift_held = false;
+                    if state.shift_set {
+                        state.shift_set = false;
+                        let before = state.mode_status_text().to_string();
+                        set_english_mode(state, !state.is_english_mode());
+                        log::info!(
+                            "shift-toggle serial={serial} {before} -> {} english={} passthrough={}",
+                            state.mode_status_text(),
+                            state.is_english_mode(),
+                            state.passthrough_mode
+                        );
+                        true
+                    } else {
                         log::info!(
                             "shift-release serial={serial} ignored shift_set={} keysym={:#x}",
                             state.shift_set,
                             key_event.keysym
                         );
+                        state.editor.is_selecting() || !state.preedit().is_empty()
                     }
+                } else {
                     state.editor.is_selecting() || !state.preedit().is_empty()
                 };
                 wrap(input_method::filter_key(serial, filter))
             }
             Message::Modifiers(modifiers) => {
                 log::info!(
-                    "modifiers shift={} ctrl={} alt={} logo={} shift_set={}",
+                    "modifiers shift={} ctrl={} alt={} logo={} shift_set={} shift_held={}",
                     modifiers.shift,
                     modifiers.ctrl,
                     modifiers.alt,
                     modifiers.logo,
-                    state.shift_set
+                    state.shift_set,
+                    state.shift_held
                 );
                 if state.config.sync_caps_lock == "Keyboard" {
                     set_english_mode(state, modifiers.caps_lock);
                 }
                 // Fallback: some seats deliver Shift only as modifiers (no Key press/release).
+                // Rising edge only — never re-arm after Shift+letter cleared shift_set.
                 match state.config.chi_eng_mode_toggle.as_str() {
                     "Disable" | "CapsLock" | "ShiftL" | "ShiftR" => {}
                     _ => {
                         if modifiers.shift {
-                            state.shift_set = true;
-                        } else if state.shift_set {
-                            state.shift_set = false;
-                            let before = state.mode_status_text().to_string();
-                            set_english_mode(state, !state.is_english_mode());
-                            log::info!(
-                                "shift-toggle via modifiers {before} -> {} english={} passthrough={}",
-                                state.mode_status_text(),
-                                state.is_english_mode(),
-                                state.passthrough_mode
-                            );
+                            if !state.shift_held {
+                                state.shift_held = true;
+                                state.shift_set = true;
+                            }
+                        } else if state.shift_held {
+                            state.shift_held = false;
+                            if state.shift_set {
+                                state.shift_set = false;
+                                let before = state.mode_status_text().to_string();
+                                set_english_mode(state, !state.is_english_mode());
+                                log::info!(
+                                    "shift-toggle via modifiers {before} -> {} english={} passthrough={}",
+                                    state.mode_status_text(),
+                                    state.is_english_mode(),
+                                    state.passthrough_mode
+                                );
+                            }
                         }
                     }
                 }
@@ -387,10 +401,12 @@ fn handle_key_press(
 ) -> Option<Task<Message>> {
     // Arm 中/英 toggle on press in every mode (including active preedit).
     if is_chi_eng_toggle_key(state, &key, &key_event) {
+        state.shift_held = true;
         state.shift_set = true;
         return Some(Task::none());
     }
     // Shift+letter (or any other key) must not flip mode on Shift release.
+    // Keep shift_held so a late Modifiers(shift=true) cannot re-arm this hold.
     state.shift_set = false;
 
     // Ctrl+1 opens symbols; Ctrl+2…9 learn user phrases (ibus Chewing UX).
