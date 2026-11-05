@@ -51,15 +51,10 @@ impl InputMethodState {
             == chewing::editor::LanguageMode::English
     }
 
+    /// Panel label: 中 / 英 only (fullwidth stays in the menu / Shift+Space).
     pub fn mode_status_text(&self) -> &str {
-        // Passthrough is only used while LanguageMode is English, so 英 covers both
-        // in-IME English and post-commit passthrough English.
         if self.is_english_mode() {
             "英"
-        } else if self.editor.editor_options().character_form
-            == chewing::editor::CharacterForm::Fullwidth
-        {
-            "全"
         } else {
             "中"
         }
