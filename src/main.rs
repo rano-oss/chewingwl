@@ -237,22 +237,22 @@ impl cosmic::Application for ChewingWl {
             Message::Modifiers(modifiers) => {
                 log::info!(
                     "modifiers shift={} ctrl={} alt={} logo={} shift_set={} shift_held={}",
-                    modifiers.shift,
-                    modifiers.ctrl,
-                    modifiers.alt,
-                    modifiers.logo,
+                    modifiers.shift(),
+                    modifiers.control(),
+                    modifiers.alt(),
+                    modifiers.logo(),
                     state.shift_set,
                     state.shift_held
                 );
                 if state.config.sync_caps_lock == "Keyboard" {
-                    set_english_mode(state, modifiers.caps_lock);
+                    set_english_mode(state, modifiers.contains(Modifiers::CAPS_LOCK));
                 }
                 // Fallback: some seats deliver Shift only as modifiers (no Key press/release).
                 // Rising edge only — never re-arm after Shift+letter cleared shift_set.
                 match state.config.chi_eng_mode_toggle.as_str() {
                     "Disable" | "CapsLock" | "ShiftL" | "ShiftR" => {}
                     _ => {
-                        if modifiers.shift {
+                        if modifiers.shift() {
                             if !state.shift_held {
                                 state.shift_held = true;
                                 state.shift_set = true;
@@ -410,7 +410,7 @@ fn handle_key_press(
     state.shift_set = false;
 
     // Ctrl+1 opens symbols; Ctrl+2…9 learn user phrases (ibus Chewing UX).
-    if modifiers.ctrl {
+    if modifiers.control() {
         if let Some(code) = ctrl_digit_keycode(&key, &key_event) {
             state.editor.process_keyevent(
                 state
@@ -681,7 +681,7 @@ fn handle_entering(
     match key.as_ref() {
         Key::Named(Named::Backspace) => state.send_key_and_sync(keyboard::KeyCode::Backspace),
         Key::Character(" ") => {
-            if modifiers.shift {
+            if modifiers.shift() {
                 state.process_shift_space();
             } else {
                 state.send_key(keyboard::KeyCode::Space);
@@ -874,7 +874,7 @@ fn handle_normal(
 
     // Shift+Space must work even in 英 passthrough (otherwise fullwidth can never
     // be enabled from that mode — passthrough would eat the chord).
-    if key.as_ref() == Key::Character(" ") && modifiers.shift {
+    if key.as_ref() == Key::Character(" ") && modifiers.shift() {
         if state.config.enable_fullwidth_toggle_key {
             state.process_shift_space();
             return Some(state.process_key_and_sync());
