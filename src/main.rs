@@ -446,19 +446,16 @@ fn handle_selecting(
             if arrow_select && move_selection_index(state, 1) {
                 Task::none()
             } else if arrow_select {
-                // Past last candidate page: hand off to chewing (interval / next set).
-                state.send_key(keyboard::KeyCode::Down);
-                state.reset_selection_view();
-                state.sync_preedit()
+                // Past last client page: shrink/move selection interval (not chewing Down,
+                // which only advances page_no and never reaches shorter phrases).
+                jump_selection_point(state, true)
             } else {
                 let page_len = page_len(state);
                 if state.index + 1 < page_len {
                     state.index += 1;
                     Task::none()
                 } else {
-                    state.send_key(keyboard::KeyCode::Down);
-                    state.reset_selection_view();
-                    state.sync_preedit()
+                    jump_selection_point(state, true)
                 }
             }
         }
@@ -466,9 +463,8 @@ fn handle_selecting(
             if arrow_select && move_selection_index(state, -1) {
                 Task::none()
             } else if arrow_select {
-                state.send_key(keyboard::KeyCode::Up);
-                state.reset_selection_view();
-                state.sync_preedit()
+                // Past first page: grow selection interval (chewing Up cancels selecting).
+                jump_selection_point(state, false)
             } else {
                 state.index = state.index.saturating_sub(1);
                 Task::none()
@@ -525,7 +521,7 @@ fn move_selection_index(state: &mut InputMethodState, delta: isize) -> bool {
     let next = state.index as isize + delta;
     if next < 0 {
         if state.page == 0 {
-            // Past first page upward — let libchewing handle (interval / exit).
+            // Past first page upward — jump_selection_point / cancel.
             return false;
         }
         turn_page(state, -1);
@@ -538,13 +534,35 @@ fn move_selection_index(state: &mut InputMethodState, delta: isize) -> bool {
             clamp_index_to_page(state);
             true
         } else {
-            // Past last page downward — libchewing advances interval / candidates.
+            // Past last page downward — jump_selection_point.
             false
         }
     } else {
         state.index = next as usize;
         true
     }
+}
+
+/// Move to the next/prev phrase selection interval (e.g. 2-char → 1-char candidates).
+/// Chewing's Down/Up KeyCodes only page or cancel selecting — they do not jump intervals.
+fn jump_selection_point(state: &mut InputMethodState, forward: bool) -> Task<Message> {
+    let jumped = if forward {
+        state.editor.has_next_selection_point()
+            && state.editor.jump_to_next_selection_point().is_ok()
+    } else {
+        state.editor.has_prev_selection_point()
+            && state.editor.jump_to_prev_selection_point().is_ok()
+    };
+    if jumped {
+        state.reset_selection_view();
+        return state.sync_preedit();
+    }
+    if !forward {
+        let _ = state.editor.cancel_selecting();
+        state.reset_selection_view();
+        return state.sync_preedit();
+    }
+    Task::none()
 }
 
 fn selection_index(
