@@ -596,7 +596,7 @@ dependencies = [
 [[package]]
 name = "build_helpers"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "cfg_aliases",
 ]
@@ -1266,7 +1266,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.3",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1431,7 +1431,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2104,7 +2104,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "build_helpers",
  "dnd",
@@ -2126,7 +2126,7 @@ dependencies = [
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -2135,7 +2135,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "bitflags 2.13.2",
  "build_helpers",
@@ -2162,7 +2162,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2172,7 +2172,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "futures",
  "iced_core",
@@ -2186,7 +2186,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "bitflags 2.13.2",
  "bytemuck",
@@ -2207,7 +2207,7 @@ dependencies = [
 [[package]]
 name = "iced_program"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -2216,7 +2216,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2228,7 +2228,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "build_helpers",
  "bytes",
@@ -2246,7 +2246,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2263,7 +2263,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "as-raw-xcb-connection",
  "bitflags 2.13.2",
@@ -2295,7 +2295,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.2"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "build_helpers",
  "cosmic-client-toolkit",
@@ -2315,7 +2315,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.14.0"
-source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#fa60e14715033b21965e3e1d6761d27ca495f18c"
+source = "git+https://github.com/rano-oss/iced.git?branch=experimental%2Fxx-im-preedit-start#338a5963093df336c14b4ddecdf2b4f1beb954c7"
 dependencies = [
  "build_helpers",
  "cosmic-client-toolkit",
@@ -2556,7 +2556,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2740,7 +2740,7 @@ version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a1886916523694cd6ea3d175f03a1e5010699a2a4cc13696d83d7bea1d80638"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4208,7 +4208,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4499,7 +4499,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4659,7 +4659,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4940,7 +4940,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset",
  "tempfile",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5561,7 +5561,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
