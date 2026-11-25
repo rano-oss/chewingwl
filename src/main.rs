@@ -172,14 +172,19 @@ impl cosmic::Application for ChewingWl {
                     state.passthrough_mode,
                     state.preedit()
                 );
-                let task = apply_switch_im_behavior(state);
+                // Wayland clears preedit on focus-out; just reset local editor state.
+                state.editor.clear();
                 state.index = 0;
                 state.shift_set = false;
                 state.shift_held = false;
                 state.reset_selection_view();
                 // Keep language/fullwidth sticky; passthrough is re-armed on Activate.
                 state.resync_passthrough();
-                wrap(task)
+                wrap(Task::batch([
+                    input_method::reset_popup_size(),
+                    input_method::set_preedit_string(String::new(), 0, 0),
+                    input_method::commit(),
+                ]))
             }
             Message::KeyPressed(key_event, key, modifiers, serial) => {
                 let utf8 = key_event.utf8.clone();
@@ -244,7 +249,7 @@ impl cosmic::Application for ChewingWl {
                     state.shift_set,
                     state.shift_held
                 );
-                if state.config.sync_caps_lock == "Keyboard" {
+                if state.config.sync_caps_lock_enabled() {
                     set_english_mode(state, modifiers.contains(Modifiers::CAPS_LOCK));
                 }
                 // Fallback: some seats deliver Shift only as modifiers (no Key press/release).
@@ -440,57 +445,37 @@ fn handle_selecting(
         return state.select_candidate();
     }
 
-    let arrow_select = state.config.select_candidate_with_arrow_key;
     match key.as_ref() {
         Key::Named(Named::ArrowDown) => {
-            if arrow_select && move_selection_index(state, 1) {
+            if move_selection_index(state, 1) {
                 Task::none()
-            } else if arrow_select {
+            } else {
                 // Past last client page: shrink/move selection interval (not chewing Down,
                 // which only advances page_no and never reaches shorter phrases).
                 jump_selection_point(state, true)
-            } else {
-                let page_len = page_len(state);
-                if state.index + 1 < page_len {
-                    state.index += 1;
-                    Task::none()
-                } else {
-                    jump_selection_point(state, true)
-                }
             }
         }
         Key::Named(Named::ArrowUp) => {
-            if arrow_select && move_selection_index(state, -1) {
+            if move_selection_index(state, -1) {
                 Task::none()
-            } else if arrow_select {
+            } else {
                 // Past first page: grow selection interval (chewing Up cancels selecting).
                 jump_selection_point(state, false)
-            } else {
-                state.index = state.index.saturating_sub(1);
-                Task::none()
             }
         }
         Key::Named(Named::ArrowLeft) => {
-            if arrow_select {
-                if !move_selection_index(state, -1) {
-                    state.send_key(keyboard::KeyCode::Left);
-                    state.reset_selection_view();
-                    return state.sync_preedit();
-                }
-            } else {
-                turn_page(state, -1);
+            if !move_selection_index(state, -1) {
+                state.send_key(keyboard::KeyCode::Left);
+                state.reset_selection_view();
+                return state.sync_preedit();
             }
             Task::none()
         }
         Key::Named(Named::ArrowRight) => {
-            if arrow_select {
-                if !move_selection_index(state, 1) {
-                    state.send_key(keyboard::KeyCode::Right);
-                    state.reset_selection_view();
-                    return state.sync_preedit();
-                }
-            } else {
-                turn_page(state, 1);
+            if !move_selection_index(state, 1) {
+                state.send_key(keyboard::KeyCode::Right);
+                state.reset_selection_view();
+                return state.sync_preedit();
             }
             Task::none()
         }
@@ -502,8 +487,7 @@ fn handle_selecting(
             turn_page(state, 1);
             Task::none()
         }
-        Key::Named(Named::Enter) => state.select_candidate(),
-        Key::Character(" ") if arrow_select => state.select_candidate(),
+        Key::Named(Named::Enter) | Key::Character(" ") => state.select_candidate(),
         Key::Named(Named::Escape) => {
             let _ = state.editor.cancel_selecting();
             state.index = 0;
@@ -804,43 +788,6 @@ pub(crate) async fn notify_mode_change(body: &str) -> zbus::Result<()> {
     )
     .await?;
     Ok(())
-}
-
-fn apply_switch_im_behavior(state: &mut InputMethodState) -> Task<Message> {
-    match state.config.switch_im_behavior.as_str() {
-        "Keep" => Task::none(),
-        "CommitPreedit" => {
-            let text = state.preedit();
-            state.editor.clear();
-            if text.is_empty() {
-                Task::none()
-            } else {
-                state.send_commit(text)
-            }
-        }
-        "CommitDefault" => {
-            if state.editor.is_selecting() {
-                state.index = 0;
-                return state.select_candidate();
-            }
-            let text = state.preedit();
-            if text.is_empty() {
-                state.editor.clear();
-                return Task::none();
-            }
-            let _ = state.editor.commit();
-            state.process_key_and_sync()
-        }
-        // "Clear" and unknown — do not clear passthrough; Activate re-syncs it.
-        _ => {
-            state.editor.clear();
-            Task::batch([
-                input_method::reset_popup_size(),
-                input_method::set_preedit_string(String::new(), 0, 0),
-                input_method::commit(),
-            ])
-        }
-    }
 }
 
 /// Linux/evdev keycodes (same as wkb / keyboard-filter), not xkb.

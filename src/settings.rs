@@ -49,19 +49,8 @@ const ENGINE_LABELS: &[&str] = &["Plain Zhuyin", "Chewing (Default)", "Fuzzy Che
 const CHI_ENG_VALUES: &[&str] = &["Disable", "CapsLock", "Shift", "ShiftL", "ShiftR"];
 const CHI_ENG_LABELS: &[&str] = &["Disable", "Caps Lock", "Shift", "Shift_L", "Shift_R"];
 
-const SYNC_CAPS_VALUES: &[&str] = &["Disable", "Keyboard"];
-const SYNC_CAPS_LABELS: &[&str] = &["Disable Syncing", "Sync with Keyboard State"];
-
-const ENGLISH_CASE_VALUES: &[&str] = &["NoDefault", "Lowercase", "Uppercase"];
-const ENGLISH_CASE_LABELS: &[&str] = &["No Default", "Lowercase", "Uppercase"];
-
-const SWITCH_IM_VALUES: &[&str] = &["Clear", "Keep", "CommitPreedit", "CommitDefault"];
-const SWITCH_IM_LABELS: &[&str] = &[
-    "Clear preedit",
-    "Keep preedit",
-    "Commit preedit",
-    "Commit default selection",
-];
+const ENGLISH_CASE_VALUES: &[&str] = &["Lowercase", "Uppercase"];
+const ENGLISH_CASE_LABELS: &[&str] = &["Lowercase", "Uppercase"];
 
 /// Chewing settings stored in cosmic-config
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,29 +66,19 @@ pub struct ChewingConfig {
     pub add_phrase_direction: bool,
     pub phrase_choice_rearward: bool,
     pub disable_auto_learn_phrase: bool,
-    pub clean_buffer_focus_out: bool,
     pub easy_symbol_input: bool,
     pub enable_fullwidth_toggle_key: bool,
     pub default_fullwidth: bool,
     pub default_use_english_mode: bool,
     pub chi_eng_mode_toggle: String,
+    /// `"Keyboard"` or `"Disable"` (toggled in settings).
     pub sync_caps_lock: String,
     pub default_english_case: String,
     pub show_page_number: bool,
     pub vertical_lookup_table: bool,
     pub notify_mode_change: bool,
     #[serde(default)]
-    pub select_candidate_with_arrow_key: bool,
-    #[serde(default)]
     pub use_keypad_as_selection_key: bool,
-    /// Clear | Keep | CommitPreedit | CommitDefault (fcitx-style). `Keep` matches
-    /// legacy `clean_buffer_focus_out = false`.
-    #[serde(default = "default_switch_im")]
-    pub switch_im_behavior: String,
-}
-
-fn default_switch_im() -> String {
-    "Clear".into()
 }
 
 impl Default for ChewingConfig {
@@ -116,25 +95,26 @@ impl Default for ChewingConfig {
             add_phrase_direction: true,
             phrase_choice_rearward: false,
             disable_auto_learn_phrase: false,
-            clean_buffer_focus_out: true,
             easy_symbol_input: true,
             enable_fullwidth_toggle_key: true,
             default_fullwidth: false,
             default_use_english_mode: false,
             chi_eng_mode_toggle: "Shift".to_string(),
             sync_caps_lock: "Disable".to_string(),
-            default_english_case: "NoDefault".to_string(),
+            default_english_case: "Lowercase".to_string(),
             show_page_number: false,
             vertical_lookup_table: true,
             notify_mode_change: false,
-            select_candidate_with_arrow_key: true,
             use_keypad_as_selection_key: false,
-            switch_im_behavior: "Clear".to_string(),
         }
     }
 }
 
 impl ChewingConfig {
+    pub fn sync_caps_lock_enabled(&self) -> bool {
+        self.sync_caps_lock == "Keyboard"
+    }
+
     pub fn load() -> Self {
         let config = match cosmic::cosmic_config::Config::new(CONFIG_NAME, CONFIG_VERSION) {
             Ok(c) => c,
@@ -142,13 +122,11 @@ impl ChewingConfig {
         };
         use cosmic::cosmic_config::ConfigGet;
         let mut cfg: Self = config.get("settings").unwrap_or_default();
-        // Migrate older configs that only had clean_buffer_focus_out.
-        if !SWITCH_IM_VALUES.contains(&cfg.switch_im_behavior.as_str()) {
-            cfg.switch_im_behavior = if cfg.clean_buffer_focus_out {
-                "Clear".into()
-            } else {
-                "Keep".into()
-            };
+        // Migrate legacy "NoDefault" → Lowercase (only two cases remain).
+        if cfg.default_english_case == "NoDefault"
+            || !ENGLISH_CASE_VALUES.contains(&cfg.default_english_case.as_str())
+        {
+            cfg.default_english_case = "Lowercase".into();
         }
         cfg
     }
@@ -182,7 +160,6 @@ pub enum Msg {
     SetSelectionKeys(String),
     SetConversionEngine(String),
     SetChiEngModeToggle(String),
-    SetSyncCapsLock(String),
     SetDefaultEnglishCase(String),
     SetCandidatesPerPage(usize),
     SetAutoCommitThreshold(usize),
@@ -192,7 +169,6 @@ pub enum Msg {
     ToggleAddPhraseDirection(bool),
     TogglePhraseChoiceRearward(bool),
     ToggleDisableAutoLearn(bool),
-    ToggleCleanBufferFocusOut(bool),
     ToggleEasySymbol(bool),
     ToggleFullwidthKey(bool),
     ToggleDefaultFullwidth(bool),
@@ -200,9 +176,8 @@ pub enum Msg {
     ToggleShowPageNumber(bool),
     ToggleVerticalLookupTable(bool),
     ToggleNotifyModeChange(bool),
-    ToggleSelectWithArrowKey(bool),
     ToggleKeypadAsSelection(bool),
-    SetSwitchImBehavior(String),
+    ToggleSyncCapsLock(bool),
     ExportUserDict,
     ImportUserDict,
     ClearUserDict,
@@ -256,7 +231,6 @@ pub fn apply_msg(config: &mut ChewingConfig, msg: Msg) -> Option<String> {
         Msg::SetSelectionKeys(k) => config.selection_keys = k,
         Msg::SetConversionEngine(e) => config.conversion_engine = e,
         Msg::SetChiEngModeToggle(t) => config.chi_eng_mode_toggle = t,
-        Msg::SetSyncCapsLock(s) => config.sync_caps_lock = s,
         Msg::SetDefaultEnglishCase(c) => config.default_english_case = c,
         Msg::SetCandidatesPerPage(n) => config.candidates_per_page = n.clamp(1, 10),
         Msg::SetAutoCommitThreshold(n) => config.auto_commit_threshold = n.clamp(11, 39),
@@ -266,14 +240,6 @@ pub fn apply_msg(config: &mut ChewingConfig, msg: Msg) -> Option<String> {
         Msg::ToggleAddPhraseDirection(v) => config.add_phrase_direction = v,
         Msg::TogglePhraseChoiceRearward(v) => config.phrase_choice_rearward = v,
         Msg::ToggleDisableAutoLearn(v) => config.disable_auto_learn_phrase = v,
-        Msg::ToggleCleanBufferFocusOut(v) => {
-            config.clean_buffer_focus_out = v;
-            config.switch_im_behavior = if v {
-                "Clear".into()
-            } else {
-                "Keep".into()
-            };
-        }
         Msg::ToggleEasySymbol(v) => config.easy_symbol_input = v,
         Msg::ToggleFullwidthKey(v) => config.enable_fullwidth_toggle_key = v,
         Msg::ToggleDefaultFullwidth(v) => config.default_fullwidth = v,
@@ -281,11 +247,9 @@ pub fn apply_msg(config: &mut ChewingConfig, msg: Msg) -> Option<String> {
         Msg::ToggleShowPageNumber(v) => config.show_page_number = v,
         Msg::ToggleVerticalLookupTable(v) => config.vertical_lookup_table = v,
         Msg::ToggleNotifyModeChange(v) => config.notify_mode_change = v,
-        Msg::ToggleSelectWithArrowKey(v) => config.select_candidate_with_arrow_key = v,
         Msg::ToggleKeypadAsSelection(v) => config.use_keypad_as_selection_key = v,
-        Msg::SetSwitchImBehavior(v) => {
-            config.switch_im_behavior = v;
-            config.clean_buffer_focus_out = config.switch_im_behavior == "Clear";
+        Msg::ToggleSyncCapsLock(v) => {
+            config.sync_caps_lock = if v { "Keyboard" } else { "Disable" }.into();
         }
         Msg::ExportUserDict => status = Some(export_user_dict()),
         Msg::ImportUserDict => status = Some(import_user_dict()),
@@ -339,13 +303,10 @@ pub fn settings_view<'a>(
                 |i| Msg::SetChiEngModeToggle(CHI_ENG_VALUES[i].to_string()),
             ),
         ))
-        .add(widget::settings::item(
+        .add(settings_toggler(
             "Sync Caps Lock and IM",
-            widget::dropdown(
-                SYNC_CAPS_LABELS,
-                index_of(SYNC_CAPS_VALUES, &config.sync_caps_lock),
-                |i| Msg::SetSyncCapsLock(SYNC_CAPS_VALUES[i].to_string()),
-            ),
+            config.sync_caps_lock_enabled(),
+            Msg::ToggleSyncCapsLock,
         ))
         .add(widget::settings::item(
             "Default English case",
@@ -353,14 +314,6 @@ pub fn settings_view<'a>(
                 ENGLISH_CASE_LABELS,
                 index_of(ENGLISH_CASE_VALUES, &config.default_english_case),
                 |i| Msg::SetDefaultEnglishCase(ENGLISH_CASE_VALUES[i].to_string()),
-            ),
-        ))
-        .add(widget::settings::item(
-            "On focus out / switch away",
-            widget::dropdown(
-                SWITCH_IM_LABELS,
-                index_of(SWITCH_IM_VALUES, &config.switch_im_behavior),
-                |i| Msg::SetSwitchImBehavior(SWITCH_IM_VALUES[i].to_string()),
             ),
         ));
 
@@ -435,11 +388,6 @@ pub fn settings_view<'a>(
             Msg::ToggleSpaceIsSelect,
         ))
         .add(settings_toggler(
-            "Select candidate with arrow keys",
-            config.select_candidate_with_arrow_key,
-            Msg::ToggleSelectWithArrowKey,
-        ))
-        .add(settings_toggler(
             "Use keypad as selection keys",
             config.use_keypad_as_selection_key,
             Msg::ToggleKeypadAsSelection,
@@ -463,7 +411,7 @@ pub fn settings_view<'a>(
     let notifications = widget::settings::section()
         .title("Notifications")
         .add(settings_toggler(
-            "Notify mode change (中/英/全)",
+            "Notify mode change (中/英)",
             config.notify_mode_change,
             Msg::ToggleNotifyModeChange,
         ));
