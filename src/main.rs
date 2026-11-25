@@ -446,84 +446,24 @@ fn handle_selecting(
     }
 
     match key.as_ref() {
-        Key::Named(Named::ArrowDown) => {
-            if move_selection_index(state, 1) {
-                Task::none()
-            } else {
-                // Past last client page: shrink/move selection interval (not chewing Down,
-                // which only advances page_no and never reaches shorter phrases).
-                jump_selection_point(state, true)
-            }
-        }
-        Key::Named(Named::ArrowUp) => {
-            if move_selection_index(state, -1) {
-                Task::none()
-            } else {
-                // Past first page: grow selection interval (chewing Up cancels selecting).
-                jump_selection_point(state, false)
-            }
-        }
-        Key::Named(Named::ArrowLeft) => {
-            if !move_selection_index(state, -1) {
-                state.send_key(keyboard::KeyCode::Left);
-                state.reset_selection_view();
-                return state.sync_preedit();
-            }
-            Task::none()
-        }
-        Key::Named(Named::ArrowRight) => {
-            if !move_selection_index(state, 1) {
-                state.send_key(keyboard::KeyCode::Right);
-                state.reset_selection_view();
-                return state.sync_preedit();
-            }
-            Task::none()
-        }
-        Key::Named(Named::PageUp) => {
+        // Down/Up jump phrase intervals (2-char → 1-char, etc.); pick with selection keys / Enter.
+        Key::Named(Named::ArrowDown) => jump_selection_point(state, true),
+        Key::Named(Named::ArrowUp) => jump_selection_point(state, false),
+        Key::Named(Named::ArrowLeft) | Key::Named(Named::PageUp) => {
             turn_page(state, -1);
             Task::none()
         }
-        Key::Named(Named::PageDown) => {
+        Key::Named(Named::ArrowRight) | Key::Named(Named::PageDown) => {
             turn_page(state, 1);
             Task::none()
         }
-        Key::Named(Named::Enter) | Key::Character(" ") => state.select_candidate(),
+        Key::Named(Named::Enter) => state.select_candidate(),
         Key::Named(Named::Escape) => {
             let _ = state.editor.cancel_selecting();
             state.index = 0;
             state.sync_preedit()
         }
         _ => Task::none(),
-    }
-}
-
-fn move_selection_index(state: &mut InputMethodState, delta: isize) -> bool {
-    let len = page_len(state) as isize;
-    if len == 0 {
-        return false;
-    }
-    let next = state.index as isize + delta;
-    if next < 0 {
-        if state.page == 0 {
-            // Past first page upward — jump_selection_point / cancel.
-            return false;
-        }
-        turn_page(state, -1);
-        state.index = page_len(state).saturating_sub(1);
-        true
-    } else if next >= len {
-        if state.page + 1 < state.total_pages() {
-            turn_page(state, 1);
-            state.index = 0;
-            clamp_index_to_page(state);
-            true
-        } else {
-            // Past last page downward — jump_selection_point.
-            false
-        }
-    } else {
-        state.index = next as usize;
-        true
     }
 }
 
